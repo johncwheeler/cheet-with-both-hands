@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>en</string>
+	<key>CFBundleDisplayName</key>
+	<string>Cheet with Both Hands</string>
+	<key>CFBundleName</key>
+	<string>Cheet with Both Hands</string>
+	<key>CFBundleExecutable</key>
+	<string>CheetWithBothHands</string>
+	<key>CFBundleIdentifier</key>
+	<string>com.cheetwithbothhands.app</string>
+	<key>CFBundleIconFile</key>
+	<string>AppIcon</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0.0</string>
+	<key>CFBundleVersion</key>
+	<string>1</string>
+	<key>LSMinimumSystemVersion</key>
+	<string>14.0</string>
+	<key>LSApplicationCategoryType</key>
+	<string>public.app-category.productivity</string>
+	<key>LSUIElement</key>
+	<true/>
+	<key>NSHighResolutionCapable</key>
+	<true/>
+	<key>NSSupportsAutomaticGraphicsSwitching</key>
+	<true/>
+	<key>NSHumanReadableCopyright</key>
+	<string>Cheets on a hotkey, for every app.</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.cheetwithbothhands.app</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>cheetwithbothhands</string>
+			</array>
+		</dict>
+	</array>
+	<key>CFBundleDocumentTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeName</key>
+			<string>Cheet Source</string>
+			<key>CFBundleTypeRole</key>
+			<string>Viewer</string>
+			<key>LSHandlerRank</key>
+			<string>Alternate</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>net.daringfireball.markdown</string>
+				<string>public.html</string>
+				<string>public.comma-separated-values-text</string>
+				<string>public.tab-separated-values-text</string>
+				<string>public.json</string>
+				<string>public.plain-text</string>
+			</array>
+		</dict>
+	</array>
+</dict>
+</plist>
