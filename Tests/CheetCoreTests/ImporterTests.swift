@@ -1,8 +1,9 @@
-import XCTest
+import Foundation
+import Testing
 @testable import CheetCore
 
-final class MarkdownImporterTests: XCTestCase {
-    func testTitleSectionsTablesAndLists() throws {
+struct MarkdownImporterTests {
+    @Test func titleSectionsTablesAndLists() throws {
         let md = """
         # Git Cheats
 
@@ -25,25 +26,25 @@ final class MarkdownImporterTests: XCTestCase {
         """
         let result = try CheetImporter.importCheet(md, options: ImportOptions(format: .markdown))
         let cheet = result.cheet
-        XCTAssertEqual(cheet.title, "Git Cheats")
-        XCTAssertEqual(cheet.sections.map(\.title), ["", "Branches", "Misc"])
-        XCTAssertEqual(cheet.sections[0].blocks, [.text("Intro paragraph.")])
+        #expect(cheet.title == "Git Cheats")
+        #expect(cheet.sections.map(\.title) == ["", "Branches", "Misc"])
+        #expect(cheet.sections[0].blocks == [.text("Intro paragraph.")])
 
-        guard case .table(let table) = cheet.sections[1].blocks[0] else { return XCTFail("expected table") }
-        XCTAssertEqual(table.headers, ["Command", "Does"])
-        XCTAssertEqual(table.rows[1], ["`git branch -d x`", "Delete | remove"])
+        guard case .table(let table) = cheet.sections[1].blocks[0] else { Issue.record("expected table"); return }
+        #expect(table.headers == ["Command", "Does"])
+        #expect(table.rows[1] == ["`git branch -d x`", "Delete | remove"])
 
-        XCTAssertEqual(cheet.sections[1].blocks[1], .heading("Remote"))
-        guard case .table(let kv) = cheet.sections[1].blocks[2] else { return XCTFail("key/value list should become a table") }
-        XCTAssertNil(kv.headers)
-        XCTAssertEqual(kv.rows[0], ["`git push -u origin HEAD`", "push and track"])
+        #expect(cheet.sections[1].blocks[1] == .heading("Remote"))
+        guard case .table(let kv) = cheet.sections[1].blocks[2] else { Issue.record("key/value list should become a table"); return }
+        #expect(kv.headers == nil)
+        #expect(kv.rows[0] == ["`git push -u origin HEAD`", "push and track"])
 
-        guard case .list(let list) = cheet.sections[2].blocks[0] else { return XCTFail("expected list") }
-        XCTAssertTrue(list.ordered)
-        XCTAssertEqual(list.items, ["first", "second continued"])
+        guard case .list(let list) = cheet.sections[2].blocks[0] else { Issue.record("expected list"); return }
+        #expect(list.ordered)
+        #expect(list.items == ["first", "second continued"])
     }
 
-    func testNestedListsAndCode() throws {
+    @Test func nestedListsAndCode() throws {
         let md = """
         ## Setup
         - one
@@ -56,45 +57,45 @@ final class MarkdownImporterTests: XCTestCase {
         ```
         """
         let cheet = try CheetImporter.importCheet(md, options: ImportOptions(format: .markdown, fallbackTitle: "Fallback")).cheet
-        XCTAssertEqual(cheet.title, "Setup")
+        #expect(cheet.title == "Setup")
         let blocks = cheet.sections[0].blocks
-        XCTAssertEqual(blocks[0], .list(ListBlock(items: ["one", "  nested", "two"])))
-        XCTAssertEqual(blocks[1], .code(CodeBlock(code: "brew install thing\n  indented", language: "bash")))
+        #expect(blocks[0] == .list(ListBlock(items: ["one", "  nested", "two"])))
+        #expect(blocks[1] == .code(CodeBlock(code: "brew install thing\n  indented", language: "bash")))
     }
 
-    func testMultipleH1BecomeSectionsAndFallbackTitle() throws {
+    @Test func multipleH1BecomeSectionsAndFallbackTitle() throws {
         let md = "# One\ntext a\n# Two\ntext b"
         let result = try CheetImporter.importCheet(md, options: ImportOptions(fallbackTitle: "From File"))
-        XCTAssertEqual(result.cheet.title, "From File")
-        XCTAssertEqual(result.cheet.sections.map(\.title), ["One", "Two"])
+        #expect(result.cheet.title == "From File")
+        #expect(result.cheet.sections.map(\.title) == ["One", "Two"])
     }
 
-    func testSingleSectionWithSubheadingsIsSplit() throws {
+    @Test func singleSectionWithSubheadingsIsSplit() throws {
         let md = "# T\n## Only\n### A\n- x\n### B\n- y"
         let cheet = try CheetImporter.importCheet(md).cheet
-        XCTAssertEqual(cheet.sections.map(\.title), ["A", "B"])
+        #expect(cheet.sections.map(\.title) == ["A", "B"])
     }
 
-    func testExplicitTitleWins() throws {
+    @Test func explicitTitleWins() throws {
         let cheet = try CheetImporter.importCheet("# Doc\n- a", options: ImportOptions(title: "Mine")).cheet
-        XCTAssertEqual(cheet.title, "Mine")
+        #expect(cheet.title == "Mine")
     }
 
-    func testSetextHeadings() throws {
+    @Test func setextHeadings() throws {
         let cheet = try CheetImporter.importCheet("Title\n=====\n\nPart\n----\ncontent").cheet
-        XCTAssertEqual(cheet.title, "Title")
-        XCTAssertEqual(cheet.sections.map(\.title), ["Part"])
+        #expect(cheet.title == "Title")
+        #expect(cheet.sections.map(\.title) == ["Part"])
     }
 
-    func testEmptyInputThrows() {
-        XCTAssertThrowsError(try CheetImporter.importCheet("   \n ")) { error in
-            XCTAssertEqual(error as? ImportError, .empty)
+    @Test func emptyInputThrows() {
+        #expect(throws: ImportError.empty) {
+            try CheetImporter.importCheet("   \n ")
         }
     }
 }
 
-final class HTMLImporterTests: XCTestCase {
-    func testTableWithKbdAndTitle() throws {
+struct HTMLImporterTests {
+    @Test func tableWithKbdAndTitle() throws {
         let html = """
         <!doctype html><html><head><title>VS Code | Shortcuts</title><script>var x = "<h2>no</h2>";</script></head>
         <body><nav><a href="/">Home</a></nav>
@@ -109,24 +110,24 @@ final class HTMLImporterTests: XCTestCase {
         <footer>© someone</footer></main></body></html>
         """
         let result = try CheetImporter.importCheet(html)
-        XCTAssertEqual(result.detectedFormat, .html)
+        #expect(result.detectedFormat == .html)
         let cheet = result.cheet
-        XCTAssertEqual(cheet.title, "VS Code")
-        XCTAssertEqual(cheet.sections.count, 1)
-        XCTAssertEqual(cheet.sections[0].title, "General")
+        #expect(cheet.title == "VS Code")
+        #expect(cheet.sections.count == 1)
+        #expect(cheet.sections[0].title == "General")
 
         let blocks = cheet.sections[0].blocks
-        guard case .table(let first) = blocks[0] else { return XCTFail("expected table, got \(blocks)") }
-        XCTAssertEqual(first.headers, ["Keys", "Action"])
-        XCTAssertEqual(first.rows, [["`Ctrl`+`Shift`+`P`", "Command **palette**"]])
-        XCTAssertEqual(blocks[1], .heading("Editing"))
-        guard case .table(let second) = blocks[2] else { return XCTFail("expected second table") }
-        XCTAssertEqual(second.rows[0][1], "Cut line\\_one \\*star\\*")
-        XCTAssertEqual(InlineMarkdown.plainText(second.rows[0][1]), "Cut line_one *star*")
-        XCTAssertFalse(cheet.sections.flatMap(\.blocks).contains(.text("© someone")))
+        guard case .table(let first) = blocks[0] else { Issue.record("expected table, got \(blocks)"); return }
+        #expect(first.headers == ["Keys", "Action"])
+        #expect(first.rows == [["`Ctrl`+`Shift`+`P`", "Command **palette**"]])
+        #expect(blocks[1] == .heading("Editing"))
+        guard case .table(let second) = blocks[2] else { Issue.record("expected second table"); return }
+        #expect(second.rows[0][1] == "Cut line\\_one \\*star\\*")
+        #expect(InlineMarkdown.plainText(second.rows[0][1]) == "Cut line_one *star*")
+        #expect(!cheet.sections.flatMap(\.blocks).contains(.text("© someone")))
     }
 
-    func testFragmentListsDefinitionListsAndCode() throws {
+    @Test func fragmentListsDefinitionListsAndCode() throws {
         let html = """
         <h2>Motions</h2>
         <ul><li><code>w</code> next word</li><li><code>b</code> back a word</li></ul>
@@ -138,22 +139,22 @@ final class HTMLImporterTests: XCTestCase {
         <p>See <a href="https://example.com/x">the docs</a>.</p>
         """
         let cheet = try CheetImporter.importCheet(html, options: ImportOptions(format: .html)).cheet
-        XCTAssertEqual(cheet.sections.map(\.title), ["Motions", "Terms", "Code"])
-        XCTAssertEqual(cheet.sections[0].blocks, [.table(CheetTable(rows: [["`w`", "next word"], ["`b`", "back a word"]]))])
-        XCTAssertEqual(cheet.sections[1].blocks, [.table(CheetTable(rows: [["HEAD", "Current commit"], ["Index", "Staging area"]]))])
-        XCTAssertEqual(cheet.sections[2].blocks[0], .code(CodeBlock(code: "echo hi\necho there", language: "sh")))
-        XCTAssertEqual(cheet.sections[2].blocks[1], .text("See [the docs](https://example.com/x)."))
+        #expect(cheet.sections.map(\.title) == ["Motions", "Terms", "Code"])
+        #expect(cheet.sections[0].blocks == [.table(CheetTable(rows: [["`w`", "next word"], ["`b`", "back a word"]]))])
+        #expect(cheet.sections[1].blocks == [.table(CheetTable(rows: [["HEAD", "Current commit"], ["Index", "Staging area"]]))])
+        #expect(cheet.sections[2].blocks[0] == .code(CodeBlock(code: "echo hi\necho there", language: "sh")))
+        #expect(cheet.sections[2].blocks[1] == .text("See [the docs](https://example.com/x)."))
     }
 
-    func testNestedHTMLLists() throws {
+    @Test func nestedHTMLLists() throws {
         let html = "<ul><li>Top<ul><li>Child</li></ul></li><li>Next</li></ul>"
         let cheet = try CheetImporter.importCheet(html, options: ImportOptions(format: .html, fallbackTitle: "X")).cheet
-        XCTAssertEqual(cheet.sections[0].blocks, [.list(ListBlock(items: ["Top", "  Child", "Next"]))])
+        #expect(cheet.sections[0].blocks == [.list(ListBlock(items: ["Top", "  Child", "Next"]))])
     }
 }
 
-final class DelimitedImporterTests: XCTestCase {
-    func testCSVWithQuotesHeaderAndSections() throws {
+struct DelimitedImporterTests {
+    @Test func cSVWithQuotesHeaderAndSections() throws {
         let csv = #"""
         Shortcut,Action
         Navigation
@@ -163,102 +164,102 @@ final class DelimitedImporterTests: XCTestCase {
         Ctrl+/,"Toggle ""comment"""
         """#
         let result = try CheetImporter.importCheet(csv, options: ImportOptions(fallbackTitle: "Editor"))
-        XCTAssertEqual(result.detectedFormat, .delimited)
+        #expect(result.detectedFormat == .delimited)
         let cheet = result.cheet
-        XCTAssertEqual(cheet.title, "Editor")
-        XCTAssertEqual(cheet.sections.map(\.title), ["Navigation", "Editing"])
-        guard case .table(let nav) = cheet.sections[0].blocks[0] else { return XCTFail() }
-        XCTAssertEqual(nav.headers, ["Shortcut", "Action"])
-        XCTAssertEqual(nav.rows, [["Ctrl+G", "Go to line, quickly"], ["Ctrl+P", "Quick open"]])
-        guard case .table(let edit) = cheet.sections[1].blocks[0] else { return XCTFail() }
-        XCTAssertEqual(edit.rows, [["Ctrl+/", "Toggle \"comment\""]])
+        #expect(cheet.title == "Editor")
+        #expect(cheet.sections.map(\.title) == ["Navigation", "Editing"])
+        guard case .table(let nav) = cheet.sections[0].blocks[0] else { Issue.record(); return }
+        #expect(nav.headers == ["Shortcut", "Action"])
+        #expect(nav.rows == [["Ctrl+G", "Go to line, quickly"], ["Ctrl+P", "Quick open"]])
+        guard case .table(let edit) = cheet.sections[1].blocks[0] else { Issue.record(); return }
+        #expect(edit.rows == [["Ctrl+/", "Toggle \"comment\""]])
     }
 
-    func testTSVGroupingColumn() throws {
+    @Test func tSVGroupingColumn() throws {
         let tsv = "Category\tKey\tAction\nFile\t⌘N\tNew\nFile\t⌘O\tOpen\nEdit\t⌘Z\tUndo\n"
         let cheet = try CheetImporter.importCheet(tsv).cheet
-        XCTAssertEqual(cheet.sections.map(\.title), ["File", "Edit"])
-        guard case .table(let file) = cheet.sections[0].blocks[0] else { return XCTFail() }
-        XCTAssertEqual(file.headers, ["Key", "Action"])
-        XCTAssertEqual(file.rows, [["⌘N", "New"], ["⌘O", "Open"]])
+        #expect(cheet.sections.map(\.title) == ["File", "Edit"])
+        guard case .table(let file) = cheet.sections[0].blocks[0] else { Issue.record(); return }
+        #expect(file.headers == ["Key", "Action"])
+        #expect(file.rows == [["⌘N", "New"], ["⌘O", "Open"]])
     }
 
-    func testAlignedColumnsWithoutHeader() throws {
+    @Test func alignedColumnsWithoutHeader() throws {
         let text = "Ctrl+A    Select all\nCtrl+C    Copy\nCtrl+V    Paste the clipboard\n"
         let result = try CheetImporter.importCheet(text, options: ImportOptions(fallbackTitle: "Basics"))
-        XCTAssertEqual(result.detectedFormat, .delimited)
-        guard case .table(let table) = result.cheet.sections[0].blocks[0] else { return XCTFail() }
-        XCTAssertNil(table.headers)
-        XCTAssertEqual(table.rows.count, 3)
-        XCTAssertEqual(table.rows[2], ["Ctrl+V", "Paste the clipboard"])
+        #expect(result.detectedFormat == .delimited)
+        guard case .table(let table) = result.cheet.sections[0].blocks[0] else { Issue.record(); return }
+        #expect(table.headers == nil)
+        #expect(table.rows.count == 3)
+        #expect(table.rows[2] == ["Ctrl+V", "Paste the clipboard"])
     }
 
-    func testOverflowCellsMergeIntoLastColumn() {
+    @Test func overflowCellsMergeIntoLastColumn() {
         let rows = [["a", "b", "c", "d"]]
-        XCTAssertEqual(DelimitedImporter.fit(rows[0], to: 2, delimiter: .comma), ["a", "b, c, d"])
+        #expect(DelimitedImporter.fit(rows[0], to: 2, delimiter: .comma) == ["a", "b, c, d"])
     }
 }
 
-final class JSONImporterTests: XCTestCase {
-    func testArrayOfObjectsKeepsKeyOrder() throws {
+struct JSONImporterTests {
+    @Test func arrayOfObjectsKeepsKeyOrder() throws {
         let json = #"[{"key": "⌘C", "action": "Copy"}, {"key": "⌘V", "action": "Paste"}]"#
         let result = try CheetImporter.importCheet(json, options: ImportOptions(fallbackTitle: "Clip"))
-        XCTAssertEqual(result.detectedFormat, .json)
-        guard case .table(let table) = result.cheet.sections[0].blocks[0] else { return XCTFail() }
-        XCTAssertEqual(table.headers, ["key", "action"])
-        XCTAssertEqual(table.rows, [["⌘C", "Copy"], ["⌘V", "Paste"]])
+        #expect(result.detectedFormat == .json)
+        guard case .table(let table) = result.cheet.sections[0].blocks[0] else { Issue.record(); return }
+        #expect(table.headers == ["key", "action"])
+        #expect(table.rows == [["⌘C", "Copy"], ["⌘V", "Paste"]])
     }
 
-    func testObjectOfSections() throws {
+    @Test func objectOfSections() throws {
         let json = #"{"Files": {"⌘N": "New", "⌘O": "Open"}, "Tips": ["one", "two"]}"#
         let cheet = try CheetImporter.importCheet(json, options: ImportOptions(fallbackTitle: "J")).cheet
-        XCTAssertEqual(cheet.sections.map(\.title), ["Files", "Tips"])
-        XCTAssertEqual(cheet.sections[1].blocks, [.list(ListBlock(items: ["one", "two"]))])
+        #expect(cheet.sections.map(\.title) == ["Files", "Tips"])
+        #expect(cheet.sections[1].blocks == [.list(ListBlock(items: ["one", "two"]))])
     }
 
-    func testOwnCheetFormatRoundTrips() throws {
+    @Test func ownCheetFormatRoundTrips() throws {
         let original = SampleCheets.all()[0]
         let data = try LibraryStore.encodeCheet(original)
         let cheet = try CheetImporter.importCheet(String(decoding: data, as: UTF8.self)).cheet
-        XCTAssertEqual(cheet.title, original.title)
-        XCTAssertEqual(cheet.sections.map(\.blocks), original.sections.map(\.blocks))
+        #expect(cheet.title == original.title)
+        #expect(cheet.sections.map(\.blocks) == original.sections.map(\.blocks))
     }
 }
 
-final class DetectionTests: XCTestCase {
-    func testDetectsFormats() {
-        XCTAssertEqual(ImportFormat.detect("# Hi\n- a"), .markdown)
-        XCTAssertEqual(ImportFormat.detect("<table><tr><td>a</td><td>b</td></tr></table>"), .html)
-        XCTAssertEqual(ImportFormat.detect("a,b\nc,d\ne,f"), .delimited)
-        XCTAssertEqual(ImportFormat.detect("a\tb\nc\td"), .delimited)
-        XCTAssertEqual(ImportFormat.detect(#"{"a": 1}"#), .json)
-        XCTAssertEqual(ImportFormat.detect("| a | b |\n|---|---|\n| 1 | 2 |"), .markdown)
-        XCTAssertEqual(ImportFormat.detect("Just a sentence, with a comma."), .markdown)
+struct DetectionTests {
+    @Test func detectsFormats() {
+        #expect(ImportFormat.detect("# Hi\n- a") == .markdown)
+        #expect(ImportFormat.detect("<table><tr><td>a</td><td>b</td></tr></table>") == .html)
+        #expect(ImportFormat.detect("a,b\nc,d\ne,f") == .delimited)
+        #expect(ImportFormat.detect("a\tb\nc\td") == .delimited)
+        #expect(ImportFormat.detect(#"{"a": 1}"#) == .json)
+        #expect(ImportFormat.detect("| a | b |\n|---|---|\n| 1 | 2 |") == .markdown)
+        #expect(ImportFormat.detect("Just a sentence, with a comma.") == .markdown)
     }
 
-    func testTitleFromFileName() {
-        XCTAssertEqual(CheetImporter.title(fromFileName: "git-cheat_sheet.md"), "Git Cheat Sheet")
-        XCTAssertEqual(CheetImporter.title(fromFileName: "VSCode Keys.csv"), "VSCode Keys")
+    @Test func titleFromFileName() {
+        #expect(CheetImporter.title(fromFileName: "git-cheat_sheet.md") == "Git Cheat Sheet")
+        #expect(CheetImporter.title(fromFileName: "VSCode Keys.csv") == "VSCode Keys")
     }
 }
 
-final class ExportRoundTripTests: XCTestCase {
-    func testSamplesRoundTripThroughMarkdown() throws {
+struct ExportRoundTripTests {
+    @Test func samplesRoundTripThroughMarkdown() throws {
         for sample in SampleCheets.all() {
             let markdown = MarkdownExporter.markdown(for: sample)
             let reimported = try CheetImporter.importCheet(markdown, options: ImportOptions(format: .markdown)).cheet
-            XCTAssertEqual(reimported.title, sample.title)
-            XCTAssertEqual(reimported.sections.map(\.title), sample.sections.map(\.title), sample.title)
-            XCTAssertEqual(reimported.sections.map(\.blocks), sample.sections.map(\.blocks), sample.title)
+            #expect(reimported.title == sample.title)
+            #expect(reimported.sections.map(\.title) == sample.sections.map(\.title), "\(sample.title)")
+            #expect(reimported.sections.map(\.blocks) == sample.sections.map(\.blocks), "\(sample.title)")
         }
     }
 
-    func testSamplesAreNonTrivial() {
+    @Test func samplesAreNonTrivial() {
         let samples = SampleCheets.all()
-        XCTAssertEqual(samples.count, 4)
+        #expect(samples.count == 4)
         for sample in samples {
-            XCTAssertGreaterThan(sample.sections.count, 2, sample.title)
-            XCTAssertGreaterThan(sample.entryCount, 10, sample.title)
+            #expect(sample.sections.count > 2, "\(sample.title)")
+            #expect(sample.entryCount > 10, "\(sample.title)")
         }
     }
 }

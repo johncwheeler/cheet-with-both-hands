@@ -1,70 +1,71 @@
-import XCTest
+import Foundation
+import Testing
 @testable import CheetCore
 
-final class KeyCapParserTests: XCTestCase {
-    func testRecognisesCommonNotations() {
-        XCTAssertEqual(KeyCapParser.parse("Ctrl+Shift+P"), [.chord(["Ctrl", "Shift", "P"])])
-        XCTAssertEqual(KeyCapParser.parse("⌘⇧P"), [.chord(["⌘", "⇧", "P"])])
-        XCTAssertEqual(KeyCapParser.parse("⌘K ⌘S"), [.chord(["⌘", "K"]), .chord(["⌘", "S"])])
-        XCTAssertEqual(KeyCapParser.parse("`Ctrl`+`C`"), [.chord(["Ctrl", "C"])])
-        XCTAssertEqual(KeyCapParser.parse("C-x C-s"), [.chord(["Ctrl", "x"]), .chord(["Ctrl", "s"])])
-        XCTAssertEqual(KeyCapParser.parse("⇧⌘4 then Space"), [.chord(["⇧", "⌘", "4"]), .separator("then"), .chord(["Space"])])
-        XCTAssertEqual(KeyCapParser.parse("⌥← / ⌥→"), [.chord(["⌥", "←"]), .separator("/"), .chord(["⌥", "→"])])
-        XCTAssertEqual(KeyCapParser.parse("Ctrl++"), [.chord(["Ctrl", "+"])])
-        XCTAssertEqual(KeyCapParser.parse("Cmd-Shift-P"), [.chord(["Cmd", "Shift", "P"])])
-        XCTAssertEqual(KeyCapParser.parse("F5"), [.chord(["F5"])])
-        XCTAssertEqual(KeyCapParser.parse("`Ctrl` + `Alt` + `Del`"), [.chord(["Ctrl", "Alt", "Del"])])
-        XCTAssertEqual(KeyCapParser.parse("Ctrl + C"), [.chord(["Ctrl", "C"])])
-        XCTAssertEqual(KeyCapParser.parse("⌃⌥⌘/"), [.chord(["⌃", "⌥", "⌘", "/"])])
-        XCTAssertEqual(KeyCapParser.parse("⌘`"), [.chord(["⌘", "`"])])
-        XCTAssertEqual(KeyCapParser.parse("⌘,"), [.chord(["⌘", ","])])
-        XCTAssertEqual(KeyCapParser.parse("⌘+ / ⌘- / ⌘0"), [.chord(["⌘", "+"]), .separator("/"), .chord(["⌘", "-"]), .separator("/"), .chord(["⌘", "0"])])
-        XCTAssertEqual(KeyCapParser.parse("⌘+K"), [.chord(["⌘", "K"])])
-        XCTAssertEqual(KeyCapParser.parse("⌘1 … ⌘4"), [.chord(["⌘", "1"]), .separator("…"), .chord(["⌘", "4"])])
-        XCTAssertEqual(KeyCapParser.parse("⌘9, ⌘0"), [.chord(["⌘", "9"]), .separator(","), .chord(["⌘", "0"])])
-        XCTAssertEqual(KeyCapParser.parse("Ctrl+W s"), [.chord(["Ctrl", "W"]), .chord(["s"])])
+struct KeyCapParserTests {
+    @Test func recognisesCommonNotations() {
+        #expect(KeyCapParser.parse("Ctrl+Shift+P") == [.chord(["Ctrl", "Shift", "P"])])
+        #expect(KeyCapParser.parse("⌘⇧P") == [.chord(["⌘", "⇧", "P"])])
+        #expect(KeyCapParser.parse("⌘K ⌘S") == [.chord(["⌘", "K"]), .chord(["⌘", "S"])])
+        #expect(KeyCapParser.parse("`Ctrl`+`C`") == [.chord(["Ctrl", "C"])])
+        #expect(KeyCapParser.parse("C-x C-s") == [.chord(["Ctrl", "x"]), .chord(["Ctrl", "s"])])
+        #expect(KeyCapParser.parse("⇧⌘4 then Space") == [.chord(["⇧", "⌘", "4"]), .separator("then"), .chord(["Space"])])
+        #expect(KeyCapParser.parse("⌥← / ⌥→") == [.chord(["⌥", "←"]), .separator("/"), .chord(["⌥", "→"])])
+        #expect(KeyCapParser.parse("Ctrl++") == [.chord(["Ctrl", "+"])])
+        #expect(KeyCapParser.parse("Cmd-Shift-P") == [.chord(["Cmd", "Shift", "P"])])
+        #expect(KeyCapParser.parse("F5") == [.chord(["F5"])])
+        #expect(KeyCapParser.parse("`Ctrl` + `Alt` + `Del`") == [.chord(["Ctrl", "Alt", "Del"])])
+        #expect(KeyCapParser.parse("Ctrl + C") == [.chord(["Ctrl", "C"])])
+        #expect(KeyCapParser.parse("⌃⌥⌘/") == [.chord(["⌃", "⌥", "⌘", "/"])])
+        #expect(KeyCapParser.parse("⌘`") == [.chord(["⌘", "`"])])
+        #expect(KeyCapParser.parse("⌘,") == [.chord(["⌘", ","])])
+        #expect(KeyCapParser.parse("⌘+ / ⌘- / ⌘0") == [.chord(["⌘", "+"]), .separator("/"), .chord(["⌘", "-"]), .separator("/"), .chord(["⌘", "0"])])
+        #expect(KeyCapParser.parse("⌘+K") == [.chord(["⌘", "K"])])
+        #expect(KeyCapParser.parse("⌘1 … ⌘4") == [.chord(["⌘", "1"]), .separator("…"), .chord(["⌘", "4"])])
+        #expect(KeyCapParser.parse("⌘9, ⌘0") == [.chord(["⌘", "9"]), .separator(","), .chord(["⌘", "0"])])
+        #expect(KeyCapParser.parse("Ctrl+W s") == [.chord(["Ctrl", "W"]), .chord(["s"])])
     }
 
-    func testRejectsProse() {
-        XCTAssertNil(KeyCapParser.parse("Show the command palette"))
-        XCTAssertNil(KeyCapParser.parse("`dd`"))
-        XCTAssertNil(KeyCapParser.parse("`git status`"))
-        XCTAssertNil(KeyCapParser.parse("a b c"))
-        XCTAssertNil(KeyCapParser.parse("Add ⌃"))
-        XCTAssertNil(KeyCapParser.parse("Scroll"))
-        XCTAssertNil(KeyCapParser.parse("^"), "a lone caret is not Control")
-        XCTAssertEqual(KeyCapParser.parse("^C"), [.chord(["Ctrl", "C"])])
-        XCTAssertNil(KeyCapParser.parse("Drag"))
-        XCTAssertEqual(KeyCapParser.parse("Cmd+Click"), [.chord(["Cmd", "Click"])])
-        XCTAssertNil(KeyCapParser.parse("⌘§•"))
-        XCTAssertNil(KeyCapParser.parse(""))
+    @Test func rejectsProse() {
+        #expect(KeyCapParser.parse("Show the command palette") == nil)
+        #expect(KeyCapParser.parse("`dd`") == nil)
+        #expect(KeyCapParser.parse("`git status`") == nil)
+        #expect(KeyCapParser.parse("a b c") == nil)
+        #expect(KeyCapParser.parse("Add ⌃") == nil)
+        #expect(KeyCapParser.parse("Scroll") == nil)
+        #expect(KeyCapParser.parse("^") == nil, "a lone caret is not Control")
+        #expect(KeyCapParser.parse("^C") == [.chord(["Ctrl", "C"])])
+        #expect(KeyCapParser.parse("Drag") == nil)
+        #expect(KeyCapParser.parse("Cmd+Click") == [.chord(["Cmd", "Click"])])
+        #expect(KeyCapParser.parse("⌘§•") == nil)
+        #expect(KeyCapParser.parse("") == nil)
     }
 
-    func testDisplayStyles() {
-        XCTAssertEqual(KeyCapParser.display(["Ctrl", "Shift", "p"], style: .symbols), ["⌃", "⇧", "P"])
-        XCTAssertEqual(KeyCapParser.display(["⌘", "⌥", "Esc"], style: .names), ["Cmd", "Opt", "Esc"])
-        XCTAssertEqual(KeyCapParser.display(["s"], style: .symbols), ["s"])
-        XCTAssertEqual(KeyCapParser.compactSymbolLabel(["⌘", "⇧", "⌃", "P"]), "⌃⇧⌘P")
-        XCTAssertEqual(KeyCapParser.compactSymbolLabel(["⌘", "Space"]), "⌘ Space")
+    @Test func displayStyles() {
+        #expect(KeyCapParser.display(["Ctrl", "Shift", "p"], style: .symbols) == ["⌃", "⇧", "P"])
+        #expect(KeyCapParser.display(["⌘", "⌥", "Esc"], style: .names) == ["Cmd", "Opt", "Esc"])
+        #expect(KeyCapParser.display(["s"], style: .symbols) == ["s"])
+        #expect(KeyCapParser.compactSymbolLabel(["⌘", "⇧", "⌃", "P"]) == "⌃⇧⌘P")
+        #expect(KeyCapParser.compactSymbolLabel(["⌘", "Space"]) == "⌘ Space")
     }
 }
 
-final class HotkeyResolverTests: XCTestCase {
+struct HotkeyResolverTests {
     private func cheets(_ n: Int) -> [Cheet] {
         (0..<n).map { Cheet(title: "S\($0)", sections: []) }
     }
 
-    func testAutomaticNumberingCoversTenSlots() {
+    @Test func automaticNumberingCoversTenSlots() {
         let list = cheets(12)
         let plan = HotkeyResolver.resolve(cheets: list, settings: HotkeySettings())
-        XCTAssertEqual(plan.cheetCombos.count, 10)
-        XCTAssertEqual(plan.cheetCombos[list[0].id]?.keyCode, KeyCodes.one)
-        XCTAssertEqual(plan.cheetCombos[list[9].id]?.keyCode, KeyCodes.zero)
-        XCTAssertNil(plan.cheetCombos[list[10].id])
-        XCTAssertEqual(plan.cheetCombos[list[0].id]?.modifiers, [.control, .option, .command])
+        #expect(plan.cheetCombos.count == 10)
+        #expect(plan.cheetCombos[list[0].id]?.keyCode == KeyCodes.one)
+        #expect(plan.cheetCombos[list[9].id]?.keyCode == KeyCodes.zero)
+        #expect(plan.cheetCombos[list[10].id] == nil)
+        #expect(plan.cheetCombos[list[0].id]?.modifiers == [.control, .option, .command])
     }
 
-    func testCustomBeatsAutomaticAndConflictsAreReported() {
+    @Test func customBeatsAutomaticAndConflictsAreReported() {
         var list = cheets(3)
         let base: ModifierSet = [.control, .option, .command]
         // Cheet 3 claims cheet 1's automatic combo.
@@ -72,63 +73,63 @@ final class HotkeyResolverTests: XCTestCase {
         // Cheet 2 is disabled.
         list[1].hotkey = .disabled
         let plan = HotkeyResolver.resolve(cheets: list, settings: HotkeySettings())
-        XCTAssertEqual(plan.cheetCombos[list[2].id]?.keyCode, KeyCodes.one)
-        XCTAssertNil(plan.cheetCombos[list[0].id])
-        XCTAssertNil(plan.cheetCombos[list[1].id])
-        XCTAssertEqual(plan.conflicts[.showCheet(list[0].id)]?.keyCode, KeyCodes.one)
+        #expect(plan.cheetCombos[list[2].id]?.keyCode == KeyCodes.one)
+        #expect(plan.cheetCombos[list[0].id] == nil)
+        #expect(plan.cheetCombos[list[1].id] == nil)
+        #expect(plan.conflicts[.showCheet(list[0].id)]?.keyCode == KeyCodes.one)
     }
 
-    func testGlobalActionsWinAndBaseWithoutModifiersDisablesAuto() {
+    @Test func globalActionsWinAndBaseWithoutModifiersDisablesAuto() {
         var settings = HotkeySettings()
         settings.baseModifiers = [.shift]
         let plan = HotkeyResolver.resolve(cheets: cheets(3), settings: settings)
-        XCTAssertTrue(plan.cheetCombos.isEmpty)
-        XCTAssertNotNil(plan.combo(for: .showPicker))
-        XCTAssertNotNil(plan.combo(for: .toggleLastCheet))
+        #expect(plan.cheetCombos.isEmpty)
+        #expect(plan.combo(for: .showPicker) != nil)
+        #expect(plan.combo(for: .toggleLastCheet) != nil)
     }
 
-    func testSlotLabels() {
-        XCTAssertEqual(HotkeyResolver.slotLabel(forIndex: 0), "1")
-        XCTAssertEqual(HotkeyResolver.slotLabel(forIndex: 9), "0")
-        XCTAssertNil(HotkeyResolver.slotLabel(forIndex: 10))
+    @Test func slotLabels() {
+        #expect(HotkeyResolver.slotLabel(forIndex: 0) == "1")
+        #expect(HotkeyResolver.slotLabel(forIndex: 9) == "0")
+        #expect(HotkeyResolver.slotLabel(forIndex: 10) == nil)
     }
 }
 
-final class SearchTests: XCTestCase {
-    func testFilterKeepsMatchingRowsAndWholeSections() throws {
+struct SearchTests {
+    @Test func filterKeepsMatchingRowsAndWholeSections() throws {
         let cheet = SampleCheets.all()[1] // macOS Essentials
         let index = CheetSearchIndex(cheet: cheet)
 
         let screenshots = index.filter("screenshots")
-        XCTAssertEqual(screenshots.map(\.title), ["Screenshots"])
-        XCTAssertEqual(screenshots[0].blocks, cheet.sections.first { $0.title == "Screenshots" }!.blocks)
+        #expect(screenshots.map(\.title) == ["Screenshots"])
+        #expect(screenshots[0].blocks == cheet.sections.first { $0.title == "Screenshots" }!.blocks)
 
         let trash = index.filter("trash")
-        XCTAssertEqual(trash.map(\.title), ["Finder"])
-        guard case .table(let t) = trash[0].blocks[0] else { return XCTFail() }
-        XCTAssertEqual(t.rows.count, 1)
+        #expect(trash.map(\.title) == ["Finder"])
+        guard case .table(let t) = trash[0].blocks[0] else { Issue.record(); return }
+        #expect(t.rows.count == 1)
 
-        XCTAssertTrue(index.filter("zzqx").isEmpty)
-        XCTAssertEqual(index.filter("").count, cheet.sections.count)
+        #expect(index.filter("zzqx").isEmpty)
+        #expect(index.filter("").count == cheet.sections.count)
     }
 
-    func testMultiTokenAndDiacritics() {
+    @Test func multiTokenAndDiacritics() {
         let cheet = Cheet(title: "T", sections: [
             CheetSection(title: "Café", blocks: [.table(CheetTable(rows: [["⌘N", "New window"], ["⌘W", "Close window"]]))]),
         ])
         let index = CheetSearchIndex(cheet: cheet)
-        XCTAssertEqual(index.filter("cafe").first?.blocks.count, 1)
-        guard case .table(let t) = index.filter("close win").first?.blocks.first else { return XCTFail() }
-        XCTAssertEqual(t.rows, [["⌘W", "Close window"]])
+        #expect(index.filter("cafe").first?.blocks.count == 1)
+        guard case .table(let t) = index.filter("close win").first?.blocks.first else { Issue.record(); return }
+        #expect(t.rows == [["⌘W", "Close window"]])
     }
 }
 
-final class StorageTests: XCTestCase {
-    func testLibraryAndSettingsPersist() throws {
+struct StorageTests {
+    @Test func libraryAndSettingsPersist() throws {
         let dir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: dir) }
         let store = LibraryStore(directory: dir)
-        XCTAssertNil(try store.loadCheets())
+        #expect(try store.loadCheets() == nil)
 
         var cheets = SampleCheets.all().map { cheet -> Cheet in
             var s = cheet
@@ -139,34 +140,34 @@ final class StorageTests: XCTestCase {
         cheets[0].appearance = Appearance()
         cheets[1].hotkey = .custom(KeyCombo(keyCode: KeyCodes.k, modifiers: [.command, .shift]))
         try store.saveCheets(cheets)
-        XCTAssertEqual(try store.loadCheets(), cheets)
+        #expect(try store.loadCheets() == cheets)
 
         var settings = AppSettings()
         settings.appearance.fontSize = 17
         settings.hotkeys.baseModifiers = [.control, .shift]
         try store.saveSettings(settings)
-        XCTAssertEqual(store.loadSettings(), settings)
+        #expect(store.loadSettings() == settings)
     }
 
-    func testSettingsDecodeMissingKeysWithDefaults() throws {
+    @Test func settingsDecodeMissingKeysWithDefaults() throws {
         let json = #"{"appearance": {"fontSize": 20}, "behavior": {"trigger": "toggle"}}"#
         let settings = ResilientJSON.decode(AppSettings.self, from: Data(json.utf8), defaults: AppSettings())
-        XCTAssertEqual(settings.appearance.fontSize, 20)
-        XCTAssertEqual(settings.appearance.material, .hud)
-        XCTAssertEqual(settings.behavior.trigger, .toggle)
-        XCTAssertEqual(settings.hotkeys, HotkeySettings())
+        #expect(settings.appearance.fontSize == 20)
+        #expect(settings.appearance.material == .hud)
+        #expect(settings.behavior.trigger == .toggle)
+        #expect(settings.hotkeys == HotkeySettings())
     }
 
-    func testNormalizedRectRoundTrip() {
+    @Test func normalizedRectRoundTrip() {
         let container = CGRect(x: 100, y: 50, width: 1000, height: 800)
         let rect = CGRect(x: 300, y: 250, width: 500, height: 400)
         let n = NormalizedRect(rect: rect, in: container)
-        XCTAssertEqual(n.denormalized(in: container), rect)
+        #expect(n.denormalized(in: container) == rect)
     }
 }
 
-final class LegacyMigrationTests: XCTestCase {
-    func testPreRenameFilesStillLoad() throws {
+struct LegacyMigrationTests {
+    @Test func preRenameFilesStillLoad() throws {
         let dir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: dir) }
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
@@ -179,16 +180,16 @@ final class LegacyMigrationTests: XCTestCase {
         try Data(settings.utf8).write(to: dir.appendingPathComponent("settings.json"))
 
         let store = LibraryStore(directory: dir)
-        XCTAssertEqual(try store.loadCheets()?.map(\.title), ["Old"])
+        #expect(try store.loadCheets()?.map(\.title) == ["Old"])
         let viewState = store.loadViewState()
-        XCTAssertEqual(viewState.lastCheetID, id)
-        XCTAssertNotNil(viewState.cheets[id.uuidString])
+        #expect(viewState.lastCheetID == id)
+        #expect(viewState.cheets[id.uuidString] != nil)
         let loadedSettings = store.loadSettings()
-        XCTAssertTrue(loadedSettings.layout.perCheetFrames)
-        XCTAssertEqual(loadedSettings.layout.anchor, .top)
+        #expect(loadedSettings.layout.perCheetFrames)
+        #expect(loadedSettings.layout.anchor == .top)
     }
 
-    func testLegacyDirectoryMovesOnce() throws {
+    @Test func legacyDirectoryMovesOnce() throws {
         let base = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: base) }
         let legacy = base.appendingPathComponent("Cheat with Both Hands")
@@ -196,9 +197,9 @@ final class LegacyMigrationTests: XCTestCase {
         try FileManager.default.createDirectory(at: legacy, withIntermediateDirectories: true)
         try Data("{}".utf8).write(to: legacy.appendingPathComponent("library.json"))
 
-        XCTAssertTrue(LibraryStore.migrateLegacyDirectory(from: legacy, to: current))
-        XCTAssertTrue(FileManager.default.fileExists(atPath: current.appendingPathComponent("library.json").path))
-        XCTAssertFalse(FileManager.default.fileExists(atPath: legacy.path))
-        XCTAssertFalse(LibraryStore.migrateLegacyDirectory(from: legacy, to: current))
+        #expect(LibraryStore.migrateLegacyDirectory(from: legacy, to: current))
+        #expect(FileManager.default.fileExists(atPath: current.appendingPathComponent("library.json").path))
+        #expect(!FileManager.default.fileExists(atPath: legacy.path))
+        #expect(!LibraryStore.migrateLegacyDirectory(from: legacy, to: current))
     }
 }

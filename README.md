@@ -6,7 +6,8 @@ peek and let go to hide it.
 
 ## Build & run
 
-Requires macOS 14+ and Xcode 16+ (Swift 6 toolchain).
+Requires macOS 14+ and a Swift 6 toolchain: Xcode 16+, or just the Command Line Tools. Tests use
+Swift Testing, so they run without Xcode too.
 
 ```bash
 make app        # builds "build/Cheet with Both Hands.app" (release, ad-hoc signed)

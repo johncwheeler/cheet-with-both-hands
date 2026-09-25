@@ -1,4 +1,5 @@
-import XCTest
+import Foundation
+import Testing
 @testable import CheetCore
 
 /// Fixtures are hand-written to mirror Cheatography's markup structure (no site content is copied).
@@ -83,92 +84,92 @@ enum Fixtures {
     }
 }
 
-final class CheatographyExtractorTests: XCTestCase {
-    func testExtractsBlocksMetadataAndSkipsComments() {
-        XCTAssertTrue(CheatographyExtractor.canHandle(html: Fixtures.cheatSheetPage))
+struct CheatographyExtractorTests {
+    @Test func extractsBlocksMetadataAndSkipsComments() {
+        #expect(CheatographyExtractor.canHandle(html: Fixtures.cheatSheetPage))
         let doc = WebExtractor.extract(text: Fixtures.cheatSheetPage, url: URL(string: "https://cheatography.com/sam/cheat-sheets/widget-tricks/"))
-        XCTAssertEqual(doc.extractorName, "Cheatography")
-        XCTAssertEqual(doc.title, "Widget Tricks")
-        XCTAssertEqual(doc.author, "sam")
-        XCTAssertEqual(doc.summary, "Handy widget tricks & shortcuts.")
-        XCTAssertEqual(doc.attribution, "by sam · Cheatography")
-        XCTAssertEqual(doc.sections.map(\.title), ["Basics", "Pairs", "Options", "Loop", "Install"])
+        #expect(doc.extractorName == "Cheatography")
+        #expect(doc.title == "Widget Tricks")
+        #expect(doc.author == "sam")
+        #expect(doc.summary == "Handy widget tricks & shortcuts.")
+        #expect(doc.attribution == "by sam · Cheatography")
+        #expect(doc.sections.map(\.title) == ["Basics", "Pairs", "Options", "Loop", "Install"])
 
         let basics = doc.sections[0].blocks
-        XCTAssertEqual(basics[0], .table(CheetTable(rows: [["Ctrl+W", "Wiggle the **widget**"], ["Ctrl+S", "Spinning"], ["Ctrl+Q", ""]])))
-        XCTAssertEqual(basics[1], .text("Works in every mode."))
-        XCTAssertEqual(doc.sections[1].blocks, [.table(CheetTable(rows: [["a", "alpha"], ["b", "beta"]]))])
-        XCTAssertEqual(doc.sections[2].blocks, [.list(ListBlock(items: ["verbose", "quiet"]))])
-        XCTAssertEqual(doc.sections[3].blocks, [.text("**While**\nwhile x:\nstep()")])
-        XCTAssertEqual(doc.sections[4].blocks, [.code(CodeBlock(code: "$ widget install\n$ widget run"))])
-        XCTAssertFalse(doc.sections.flatMap(\.blocks).contains(.text("Nice one!")))
+        #expect(basics[0] == .table(CheetTable(rows: [["Ctrl+W", "Wiggle the **widget**"], ["Ctrl+S", "Spinning"], ["Ctrl+Q", ""]])))
+        #expect(basics[1] == .text("Works in every mode."))
+        #expect(doc.sections[1].blocks == [.table(CheetTable(rows: [["a", "alpha"], ["b", "beta"]]))])
+        #expect(doc.sections[2].blocks == [.list(ListBlock(items: ["verbose", "quiet"]))])
+        #expect(doc.sections[3].blocks == [.text("**While**\nwhile x:\nstep()")])
+        #expect(doc.sections[4].blocks == [.code(CodeBlock(code: "$ widget install\n$ widget run"))])
+        #expect(!doc.sections.flatMap(\.blocks).contains(.text("Nice one!")))
     }
 
-    func testSelectionBuildsCheet() {
+    @Test func selectionBuildsCheet() {
         let doc = WebExtractor.extract(text: Fixtures.cheatSheetPage, url: nil)
         var selection = ElementSelection()
         selection.setSection(doc.sections[2], included: false)          // drop "Options"
         selection.setBlock(1, in: doc.sections[0], included: false)       // drop the note in "Basics"
-        XCTAssertEqual(selection.state(of: doc.sections[0]), .mixed)
-        XCTAssertEqual(selection.state(of: doc.sections[2]), .off)
+        #expect(selection.state(of: doc.sections[0]) == .mixed)
+        #expect(selection.state(of: doc.sections[2]) == .off)
 
         let cheet = doc.cheet(selection: selection, title: "Mine")
-        XCTAssertEqual(cheet.title, "Mine")
-        XCTAssertEqual(cheet.sections.map(\.title), ["Basics", "Pairs", "Loop", "Install"])
-        XCTAssertEqual(cheet.sections[0].blocks.count, 1)
-        XCTAssertEqual(cheet.source?.attribution, "by sam · Cheatography")
+        #expect(cheet.title == "Mine")
+        #expect(cheet.sections.map(\.title) == ["Basics", "Pairs", "Loop", "Install"])
+        #expect(cheet.sections[0].blocks.count == 1)
+        #expect(cheet.source?.attribution == "by sam · Cheatography")
 
         selection.setBlock(0, in: doc.sections[2], included: true)       // re-including a block re-includes its section
-        XCTAssertEqual(selection.state(of: doc.sections[2]), .on)
+        #expect(selection.state(of: doc.sections[2]) == .on)
     }
 }
 
-final class CatalogTests: XCTestCase {
-    func testParsesListingItemsNextPageAndTags() {
+struct CatalogTests {
+    @Test func parsesListingItemsNextPageAndTags() {
         let page = CheatographyCatalog.parseListing(Fixtures.listingPage)
-        XCTAssertEqual(page.items.map(\.id), ["1", "2"], "sidebar items are excluded")
+        #expect(page.items.map(\.id) == ["1", "2"], "sidebar items are excluded")
         let first = page.items[0]
-        XCTAssertEqual(first.url.absoluteString, "https://cheatography.com/sam/cheat-sheets/widget-tricks/")
-        XCTAssertEqual(first.title, "Widget Tricks Cheat Sheet")
-        XCTAssertEqual(first.displayTitle, "Widget Tricks")
-        XCTAssertEqual(first.kind, "Cheat Sheet")
-        XCTAssertEqual(first.author, "sam")
-        XCTAssertEqual(first.summary, "About Widget Tricks Cheat Sheet & more.")
-        XCTAssertEqual(first.thumbnailURL?.absoluteString, "https://media.cheatography.com/storage/thumb/sam_widget-tricks.400.jpg")
-        XCTAssertEqual(first.rating, 4.5)
-        XCTAssertEqual(first.ratingCount, 12)
-        XCTAssertEqual(first.pageCount, 2)
-        XCTAssertEqual(first.tags.map(\.name), ["widgets", "tools"])
-        XCTAssertEqual(first.tags.map(\.slug), ["widgets", "tools"])
-        XCTAssertEqual(first.updated, "1 Jan 19, updated 1 Jan 20")
-        XCTAssertEqual(page.items[1].kind, "Keyboard Shortcuts")
-        XCTAssertNil(page.items[1].rating)
-        XCTAssertEqual(page.nextPageURL?.absoluteString, "https://cheatography.com/tag/widgets/2")
-        XCTAssertEqual(page.heading, "2 Widget Cheat Sheets")
-        XCTAssertEqual(page.tagGroups.first?.title, "Top Tags in Programming")
-        XCTAssertEqual(page.tagGroups.first?.tags.map(\.slug), ["python", "git"])
-        XCTAssertEqual(page.tagGroups.first?.tags.first?.count, 183)
+        #expect(first.url.absoluteString == "https://cheatography.com/sam/cheat-sheets/widget-tricks/")
+        #expect(first.title == "Widget Tricks Cheat Sheet")
+        #expect(first.displayTitle == "Widget Tricks")
+        #expect(first.kind == "Cheat Sheet")
+        #expect(first.author == "sam")
+        #expect(first.summary == "About Widget Tricks Cheat Sheet & more.")
+        #expect(first.thumbnailURL?.absoluteString == "https://media.cheatography.com/storage/thumb/sam_widget-tricks.400.jpg")
+        #expect(first.rating == 4.5)
+        #expect(first.ratingCount == 12)
+        #expect(first.pageCount == 2)
+        #expect(first.tags.map(\.name) == ["widgets", "tools"])
+        #expect(first.tags.map(\.slug) == ["widgets", "tools"])
+        #expect(first.updated == "1 Jan 19, updated 1 Jan 20")
+        #expect(page.items[1].kind == "Keyboard Shortcuts")
+        #expect(page.items[1].rating == nil)
+        #expect(page.nextPageURL?.absoluteString == "https://cheatography.com/tag/widgets/2")
+        #expect(page.heading == "2 Widget Cheat Sheets")
+        #expect(page.tagGroups.first?.title == "Top Tags in Programming")
+        #expect(page.tagGroups.first?.tags.map(\.slug) == ["python", "git"])
+        #expect(page.tagGroups.first?.tags.first?.count == 183)
     }
 
-    func testPopularTagsSplitCounts() {
+    @Test func popularTagsSplitCounts() {
         let html = #"<h2>Most Popular Tags</h2><ul><li><a href="/tag/linux/">linux (240)</a></li><li><a href="/tag/python/">python</a></li></ul>"#
         let tags = CheatographyCatalog.popularTags(html)
-        XCTAssertEqual(tags.map(\.name), ["linux", "python"])
-        XCTAssertEqual(tags.first?.count, 240)
+        #expect(tags.map(\.name) == ["linux", "python"])
+        #expect(tags.first?.count == 240)
     }
 
-    func testSearchPaginationAndSourceURLs() {
+    @Test func searchPaginationAndSourceURLs() {
         let html = ##"<ul class="pagination"><li class="active"><a href="#">1</a></li><li><a href="/explore/search/?q=vim&amp;page=2">2</a></li></ul>"##
-        XCTAssertEqual(CheatographyCatalog.parseListing(html).nextPageURL?.absoluteString, "https://cheatography.com/explore/search/?q=vim&page=2")
-        XCTAssertEqual(CheatographyCatalog.Source.search("git rebase").url.absoluteString, "https://cheatography.com/explore/search/?q=git%20rebase")
-        XCTAssertEqual(CheatographyCatalog.Source.tag(slug: "python", name: "Python").url.absoluteString, "https://cheatography.com/tag/python/cheat-sheets/")
-        XCTAssertTrue(CheatographyCatalog.isCheatSheetURL(URL(string: "https://cheatography.com/sam/cheat-sheets/widget-tricks/")!))
-        XCTAssertFalse(CheatographyCatalog.isCheatSheetURL(URL(string: "https://cheatography.com/programming/")!))
+        #expect(CheatographyCatalog.parseListing(html).nextPageURL?.absoluteString == "https://cheatography.com/explore/search/?q=vim&page=2")
+        #expect(CheatographyCatalog.Source.search("git rebase").url.absoluteString == "https://cheatography.com/explore/search/?q=git%20rebase")
+        #expect(CheatographyCatalog.Source.tag(slug: "python", name: "Python").url.absoluteString == "https://cheatography.com/tag/python/cheat-sheets/")
+        #expect(CheatographyCatalog.isCheatSheetURL(URL(string: "https://cheatography.com/sam/cheat-sheets/widget-tricks/")!))
+        #expect(!CheatographyCatalog.isCheatSheetURL(URL(string: "https://cheatography.com/programming/")!))
     }
 }
 
-final class GenericWebImportTests: XCTestCase {
-    func testMainContentLayoutTablesAndChromeSuggestions() {
+struct GenericWebImportTests {
+    @Test func mainContentLayoutTablesAndChromeSuggestions() {
         let html = """
         <html><head><meta property="og:title" content="Tmux Cheatsheet"><meta property="og:site_name" content="Example Docs"></head>
         <body><div class="menu"><ul><li><a href="https://x.test/a">Home</a></li><li><a href="https://x.test/b">About</a></li></ul></div>
@@ -182,35 +183,35 @@ final class GenericWebImportTests: XCTestCase {
         </main></body></html>
         """
         let doc = WebExtractor.extract(text: html, url: URL(string: "https://x.test/tmux"))
-        XCTAssertEqual(doc.extractorName, "Main content")
-        XCTAssertTrue(doc.hasMainContent)
-        XCTAssertEqual(doc.title, "Tmux")
-        XCTAssertEqual(doc.siteName, "Example Docs")
-        XCTAssertEqual(doc.sections.map(\.title), ["Sessions", "Related posts", "Panes"])
-        XCTAssertEqual(doc.sections[0].blocks, [.table(CheetTable(headers: ["Key", "Does"], rows: [["C-b d", "Detach"]]))])
+        #expect(doc.extractorName == "Main content")
+        #expect(doc.hasMainContent)
+        #expect(doc.title == "Tmux")
+        #expect(doc.siteName == "Example Docs")
+        #expect(doc.sections.map(\.title) == ["Sessions", "Related posts", "Panes"])
+        #expect(doc.sections[0].blocks == [.table(CheetTable(headers: ["Key", "Does"], rows: [["C-b d", "Detach"]]))])
 
         let suggested = doc.suggestedSelection()
-        XCTAssertFalse(suggested.includes(doc.sections[1].id), "“Related posts” is chrome")
-        XCTAssertFalse(suggested.includes(doc.sections[2].id, block: 0), "link-only list is chrome")
-        XCTAssertTrue(suggested.includes(doc.sections[2].id, block: 1))
-        XCTAssertFalse(suggested.includes(doc.sections[2].id, block: 2), "cookie banner text is chrome")
-        XCTAssertEqual(doc.cheet(selection: suggested).sections.map(\.title), ["Sessions", "Panes"])
+        #expect(!suggested.includes(doc.sections[1].id), "“Related posts” is chrome")
+        #expect(!suggested.includes(doc.sections[2].id, block: 0), "link-only list is chrome")
+        #expect(suggested.includes(doc.sections[2].id, block: 1))
+        #expect(!suggested.includes(doc.sections[2].id, block: 2), "cookie banner text is chrome")
+        #expect(doc.cheet(selection: suggested).sections.map(\.title) == ["Sessions", "Panes"])
 
         let whole = WebExtractor.extract(text: html, url: nil, mainContentOnly: false)
-        XCTAssertEqual(whole.extractorName, "Whole page")
-        XCTAssertGreaterThan(whole.elementCount, doc.elementCount)
+        #expect(whole.extractorName == "Whole page")
+        #expect(whole.elementCount > doc.elementCount)
     }
 
-    func testMarkdownFromURL() {
+    @Test func markdownFromURL() {
         let doc = WebExtractor.extract(text: "# Keys\n## Move\n| k | v |\n|---|---|\n| h | left |", url: URL(string: "https://raw.example.com/keys.md"), mimeType: "text/plain")
-        XCTAssertEqual(doc.title, "Keys")
-        XCTAssertEqual(doc.sections.map(\.title), ["Move"])
+        #expect(doc.title == "Keys")
+        #expect(doc.sections.map(\.title) == ["Move"])
     }
 
-    func testEntityDecodingAndTitleCleaning() {
-        XCTAssertEqual(HTMLImporter.decodeEntities("a &amp; b &#187; &#x2192; &lt;c&gt; soft&shy;hy"), "a & b » → <c> softhy")
-        XCTAssertEqual(WebDocument.cleanTitle("Regular Expressions Cheat Sheet"), "Regular Expressions")
-        XCTAssertEqual(WebDocument.cleanTitle("Docker - Cheatsheet"), "Docker")
-        XCTAssertEqual(WebDocument.cleanTitle("Cheat Sheet"), "Cheat Sheet")
+    @Test func entityDecodingAndTitleCleaning() {
+        #expect(HTMLImporter.decodeEntities("a &amp; b &#187; &#x2192; &lt;c&gt; soft&shy;hy") == "a & b » → <c> softhy")
+        #expect(WebDocument.cleanTitle("Regular Expressions Cheat Sheet") == "Regular Expressions")
+        #expect(WebDocument.cleanTitle("Docker - Cheatsheet") == "Docker")
+        #expect(WebDocument.cleanTitle("Cheat Sheet") == "Cheat Sheet")
     }
 }
