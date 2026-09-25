@@ -1,0 +1,140 @@
+.gitignore
+  h_e6a850246fe41e 1-7
+Makefile
+  h_e6a850246fe41e 1-21
+Package.swift
+  h_e6a850246fe41e 1-24
+README.md
+  h_e6a850246fe41e 1-163
+Resources/Info.plist
+  h_e6a850246fe41e 1-69
+Sources/CheetCore/Export/MarkdownExporter.swift
+  h_e6a850246fe41e 1-51
+Sources/CheetCore/Import/Cheatography.swift
+  h_e6a850246fe41e 1-428
+Sources/CheetCore/Import/CheetImporter.swift
+  h_e6a850246fe41e 1-177
+Sources/CheetCore/Import/DelimitedImporter.swift
+  h_e6a850246fe41e 1-285
+Sources/CheetCore/Import/HTMLImporter.swift
+  h_e6a850246fe41e 1-640
+Sources/CheetCore/Import/InlineMarkdown.swift
+  h_e6a850246fe41e 1-117
+Sources/CheetCore/Import/JSONImporter.swift
+  h_e6a850246fe41e 1-115
+Sources/CheetCore/Import/MarkdownImporter.swift
+  h_e6a850246fe41e 1-287
+Sources/CheetCore/Import/MathText.swift
+  h_e6a850246fe41e 1-792
+Sources/CheetCore/Import/SectionBuilder.swift
+  h_e6a850246fe41e 1-180
+Sources/CheetCore/Import/WebDocument.swift
+  h_e6a850246fe41e 1-329
+Sources/CheetCore/Models/Cheet.swift
+  h_e6a850246fe41e 1-297
+Sources/CheetCore/Models/KeyCombo.swift
+  h_e6a850246fe41e 1-128
+Sources/CheetCore/Models/SectionLayout.swift
+  h_e6a850246fe41e 1-135
+Sources/CheetCore/Models/Settings.swift
+  h_e6a850246fe41e 1-334
+Sources/CheetCore/Storage/LibraryStore.swift
+  h_e6a850246fe41e 1-141
+Sources/CheetCore/Storage/SampleCheets.swift
+  h_e6a850246fe41e 1-230
+Sources/CheetCore/Support/CardPacker.swift
+  h_e6a850246fe41e 1-81
+Sources/CheetCore/Support/CheetSearch.swift
+  h_e6a850246fe41e 1-91
+Sources/CheetCore/Support/HotkeyResolver.swift
+  h_e6a850246fe41e 1-76
+Sources/CheetCore/Support/KeyCapParser.swift
+  h_e6a850246fe41e 1-209
+Sources/CheetWithBothHands/App/AppController.swift
+  h_e6a850246fe41e 1-265
+Sources/CheetWithBothHands/App/AppDelegate.swift
+  h_e6a850246fe41e 1-130
+Sources/CheetWithBothHands/App/AppModel.swift
+  h_e6a850246fe41e 1-195
+Sources/CheetWithBothHands/App/main.swift
+  h_e6a850246fe41e 1-9
+Sources/CheetWithBothHands/Hotkeys/HotkeyCenter.swift
+  h_e6a850246fe41e 1-108
+Sources/CheetWithBothHands/Hotkeys/HotkeyRecorder.swift
+  h_e6a850246fe41e 1-111
+Sources/CheetWithBothHands/Hotkeys/KeyNames.swift
+  h_e6a850246fe41e 1-95
+Sources/CheetWithBothHands/Importer/CheetPreview.swift
+  h_e6a850246fe41e 1-62
+Sources/CheetWithBothHands/Importer/ImportModel.swift
+  h_e6a850246fe41e 1-185
+Sources/CheetWithBothHands/Importer/ImportView.swift
+  h_e6a850246fe41e 1-365
+Sources/CheetWithBothHands/Importer/WebImportModel.swift
+  h_e6a850246fe41e 1-151
+Sources/CheetWithBothHands/Importer/WebImportView.swift
+  h_e6a850246fe41e 1-368
+Sources/CheetWithBothHands/Library/CheatographyBrowserModel.swift
+  h_e6a850246fe41e 1-164
+Sources/CheetWithBothHands/Library/CheatographyBrowserView.swift
+  h_e6a850246fe41e 1-290
+Sources/CheetWithBothHands/MenuBar/StatusMenuController.swift
+  h_e6a850246fe41e 1-151
+Sources/CheetWithBothHands/Overlay/AppKitBridges.swift
+  h_e6a850246fe41e 1-257
+Sources/CheetWithBothHands/Overlay/CheetContentView.swift
+  h_e6a850246fe41e 1-292
+Sources/CheetWithBothHands/Overlay/ImageViews.swift
+  h_e6a850246fe41e 1-85
+Sources/CheetWithBothHands/Overlay/InlineRenderer.swift
+  h_e6a850246fe41e 1-63
+Sources/CheetWithBothHands/Overlay/LayoutEditing.swift
+  h_e6a850246fe41e 1-700
+Sources/CheetWithBothHands/Overlay/MasonryLayout.swift
+  h_e6a850246fe41e 1-89
+Sources/CheetWithBothHands/Overlay/OverlayController.swift
+  h_e6a850246fe41e 1-824
+Sources/CheetWithBothHands/Overlay/OverlayView.swift
+  h_e6a850246fe41e 1-440
+Sources/CheetWithBothHands/Picker/PickerController.swift
+  h_e6a850246fe41e 1-253
+Sources/CheetWithBothHands/Settings/CheetsPane.swift
+  h_e6a850246fe41e 1-310
+Sources/CheetWithBothHands/Settings/SettingsView.swift
+  h_e6a850246fe41e 1-477
+Sources/CheetWithBothHands/Settings/WindowManager.swift
+  h_e6a850246fe41e 1-170
+Sources/CheetWithBothHands/Support/DebugSnapshots.swift
+  h_e6a850246fe41e 1-222
+Sources/CheetWithBothHands/Support/ImageStore.swift
+  h_e6a850246fe41e 1-169
+Sources/CheetWithBothHands/Support/LoginItem.swift
+  h_e6a850246fe41e 1-16
+Sources/CheetWithBothHands/Support/WebFetcher.swift
+  h_e6a850246fe41e 1-65
+Tests/CheetCoreTests/ImporterTests.swift
+  h_e6a850246fe41e 1-264
+Tests/CheetCoreTests/LayoutTests.swift
+  h_e6a850246fe41e 1-116
+Tests/CheetCoreTests/MathAndImageTests.swift
+  h_e6a850246fe41e 1-154
+Tests/CheetCoreTests/SupportTests.swift
+  h_e6a850246fe41e 1-204
+Tests/CheetCoreTests/WebImportTests.swift
+  h_e6a850246fe41e 1-216
+scripts/build-app.sh
+  h_e6a850246fe41e 1-45
+scripts/make-icon.swift
+  h_e6a850246fe41e 1-100
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "34206622a7289192273b28d1d0758c3ea70d8fc1",
+  "prompts": {},
+  "humans": {
+    "h_e6a850246fe41e": {
+      "author": "John Wheeler <jcw.dev@etherealfringe.com>"
+    }
+  }
+}
