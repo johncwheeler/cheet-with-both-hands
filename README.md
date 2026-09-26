@@ -68,12 +68,26 @@ bundle's version (CI does this for tags).
 | ⌃⌥⌘1 … ⌃⌥⌘9, ⌃⌥⌘0 | Show cheet 1–10 (position in the library) |
 | ⌃⌥⌘/ | Cheet picker (search every cheet) |
 | ⌃⌥⌘` | Toggle the last cheet |
+| ⌃⌥⌘⇧1 … (a cheet's shortcut + ⇧) | Open that cheet alongside the ones showing |
+| ⌃⌥⌘H | Stash every cheet window at the screen edges (again to bring them back) |
 
 Inside the overlay: type to filter, ↑↓ scroll (⌥↑↓ / Page Up·Down / Space by the page, ⌘↑↓ to
 the ends — even while the filter field has focus), Esc clears then closes, ⇧← / ⇧→ or ⌘[ / ⌘] switch cheets (⇧← / ⇧→ only while the filter is empty), ⌘1–9 jump,
 ⌘+ / ⌘- / ⌘0 change the text size, ⌘P opens the picker, ⌘E edits the layout, ⌥⌘E edits the
 content. Click a cell to copy it. Drag the header to move, drag the corner to resize, and double-click the header to snap back to
 the preset position. Click a section title to collapse it.
+
+### Several cheets at once
+
+A cheet's shortcut replaces the cheet in the active window; add ⇧ to open it alongside instead (in
+the picker, ⇧↩ or ⇧-click). Hold a shortcut to peek at a cheet over the others. ⌥⌘T (or the menu
+bar) tiles the open windows side by side, or in a grid when there are four or more. ⌃⌥⌘H stashes
+every window at its nearest screen edge, leaving a sliver; click one or press ⌃⌥⌘H again to bring
+them back.
+
+**Workspaces** remember a set of cheet windows and where they were. Save one from the menu bar ›
+Workspaces or with ⌥⌘S in a cheet, and recall it from the picker, the menu bar, its own hotkey, or
+`cheetwithbothhands://workspace/<name>`. Manage them in Settings › Workspaces.
 
 ### Editing the layout
 
@@ -176,12 +190,14 @@ open "cheetwithbothhands://ghost"
 open "cheetwithbothhands://import"       # new cheet from the clipboard
 open "cheetwithbothhands://import-url?url=https%3A%2F%2Fexample.com%2Fkeys"
 open "cheetwithbothhands://browse?q=vim"  # search Cheatography
+open "cheetwithbothhands://show/2?alongside=1"  # open beside the cheets already showing
+open "cheetwithbothhands://workspace/Coding"    # recall a workspace
 ```
 
 ## Data
 
 Everything is plain JSON in `~/Library/Application Support/Cheet with Both Hands/`:
-`library.json` (cheets, in order), `images/` (cached images), `settings.json`, and `state.json` (last cheet, remembered
+`library.json` (cheets in order, and saved workspaces), `images/` (cached images), `settings.json`, and `state.json` (last cheet, remembered
 positions, collapsed sections). A `library.backup.json` copy is taken at every launch. Data from before the rename
 (`…/Cheat with Both Hands/`) is moved over automatically on first launch, and older files and exports
 still load.
