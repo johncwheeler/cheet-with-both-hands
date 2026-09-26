@@ -60,7 +60,7 @@ render_icon() {
     if [[ "$input" -nt "$icns" ]]; then stale=1; fi
   done
   if [[ ! -f "$icns" || $stale == 1 ]]; then
-    echo "▸ Rendering $name…"
+    echo "▸ Rendering ${name}…" # braces: bash 3.2 in a UTF-8 locale reads "…" as part of the name
     local iconset="$BUILD_DIR/$name.iconset"
     rm -rf "$iconset"
     swift "$ROOT/scripts/make-icon.swift" "$iconset" "$style" ${@+"$@"} >/dev/null
