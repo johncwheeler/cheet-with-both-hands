@@ -17,6 +17,8 @@ public enum SampleCheets {
     | ⌃⌥⌘1 … ⌃⌥⌘9, ⌃⌥⌘0 | Show cheet 1–10 (by position in the library) |
     | ⌃⌥⌘/ | Cheet picker — search every cheet |
     | ⌃⌥⌘` | Toggle the last cheet |
+    | Add ⇧ to a cheet's combo | Open it alongside the others |
+    | ⌃⌥⌘H | Stash every cheet window at the screen edges |
     | Tap the combo | Show / hide (sticky) |
     | Hold the combo | Peek — hides when you let go |
 
@@ -35,6 +37,8 @@ public enum SampleCheets {
     | ⌘P | Open the cheet picker |
     | ⌘E | Edit the layout (hide, delete, resize, style cards) |
     | ⌥⌘E | Edit the content |
+    | ⌥⌘T | Tile the open cheet windows |
+    | ⌥⌘S | Save the open windows as a workspace |
     | ⌘W | Close the overlay |
 
     ## Editing the layout

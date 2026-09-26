@@ -1,5 +1,16 @@
 import Foundation
 
+/// Everything in library.json: the cheets (in order) and the saved workspaces.
+public struct Library: Equatable, Sendable {
+    public var cheets: [Cheet]
+    public var workspaces: [Workspace]
+
+    public init(cheets: [Cheet], workspaces: [Workspace] = []) {
+        self.cheets = cheets
+        self.workspaces = workspaces
+    }
+}
+
 /// Reads and writes the cheet library, settings and view state as JSON in Application Support.
 public final class LibraryStore: @unchecked Sendable {
     public let directory: URL
@@ -42,8 +53,23 @@ public final class LibraryStore: @unchecked Sendable {
     public var backupURL: URL { directory.appendingPathComponent("library.backup.json") }
 
     struct LibraryFile: Codable {
-        var version: Int = 1
+        var version = 2
         var cheets: [Cheet]
+        var workspaces: [Workspace]
+
+        init(_ library: Library) {
+            cheets = library.cheets
+            workspaces = library.workspaces
+        }
+
+        private enum CodingKeys: String, CodingKey { case version, cheets, workspaces }
+
+        init(from decoder: Decoder) throws {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            version = c.value(.version, or: 1)
+            cheets = try c.decode([Cheet].self, forKey: .cheets) // required: this is what makes it a library file
+            workspaces = c.value(.workspaces, or: []) // unreadable workspaces must not cost the cheets
+        }
     }
 
     private func ensureDirectory() throws {
@@ -51,16 +77,19 @@ public final class LibraryStore: @unchecked Sendable {
     }
 
     /// `nil` when no library exists yet (first launch).
-    public func loadCheets() throws -> [Cheet]? {
+    public func loadLibrary() throws -> Library? {
         guard FileManager.default.fileExists(atPath: libraryURL.path) else { return nil }
-        let data = try Data(contentsOf: libraryURL)
-        return try Self.decodeCheets(from: data)
+        return try Self.decodeLibrary(from: Data(contentsOf: libraryURL))
     }
 
-    public func saveCheets(_ cheets: [Cheet]) throws {
+    /// The cheets alone (read-only convenience; saving always writes the whole library).
+    public func loadCheets() throws -> [Cheet]? {
+        try loadLibrary()?.cheets
+    }
+
+    public func saveLibrary(_ library: Library) throws {
         try ensureDirectory()
-        let data = try JSONEncoder.cheet.encode(LibraryFile(cheets: cheets))
-        try data.write(to: libraryURL, options: .atomic)
+        try Self.encodeLibrary(library).write(to: libraryURL, options: .atomic)
     }
 
     /// Keeps a copy of the library as it was at launch, in case something goes wrong.
@@ -94,17 +123,19 @@ public final class LibraryStore: @unchecked Sendable {
 
     // MARK: - Library export / import
 
-    public static func encodeLibrary(_ cheets: [Cheet]) throws -> Data {
-        try JSONEncoder.cheet.encode(LibraryFile(cheets: cheets))
+    public static func encodeLibrary(_ library: Library) throws -> Data {
+        try JSONEncoder.cheet.encode(LibraryFile(library))
     }
 
-    /// Accepts a library file, a bare array of cheets, or a single cheet.
-    public static func decodeCheets(from data: Data) throws -> [Cheet] {
+    /// Accepts a library file (with or without workspaces), a bare array of cheets, or a single cheet.
+    public static func decodeLibrary(from data: Data) throws -> Library {
         let data = LegacyKeys.rename(in: data, [["sheets"]: "cheets"])
         let decoder = JSONDecoder.cheet
-        if let file = try? decoder.decode(LibraryFile.self, from: data) { return file.cheets }
-        if let cheets = try? decoder.decode([Cheet].self, from: data) { return cheets }
-        return [try decoder.decode(Cheet.self, from: data)]
+        if let file = try? decoder.decode(LibraryFile.self, from: data) {
+            return Library(cheets: file.cheets, workspaces: file.workspaces)
+        }
+        if let cheets = try? decoder.decode([Cheet].self, from: data) { return Library(cheets: cheets) }
+        return Library(cheets: [try decoder.decode(Cheet.self, from: data)])
     }
 
     public static func encodeCheet(_ cheet: Cheet) throws -> Data {

@@ -3,6 +3,18 @@ import CheetCore
 import Observation
 import SwiftUI
 
+enum PickerItem: Identifiable {
+    case workspace(Workspace)
+    case cheet(index: Int, cheet: Cheet)
+
+    var id: UUID {
+        switch self {
+        case .workspace(let workspace): workspace.id
+        case .cheet(_, let cheet): cheet.id
+        }
+    }
+}
+
 @MainActor @Observable
 final class PickerState {
     var query = ""
@@ -15,7 +27,8 @@ final class PickerState {
 final class PickerController: NSObject, NSWindowDelegate {
     let model: AppModel
     let state = PickerState()
-    var onChoose: ((UUID) -> Void)?
+    var onChoose: ((UUID, _ alongside: Bool) -> Void)?
+    var onRecall: ((UUID) -> Void)?
 
     private let panel = OverlayPanel()
     private var keyMonitor: Any?
@@ -41,7 +54,7 @@ final class PickerController: NSObject, NSWindowDelegate {
 
     func show(focus: Bool = true) {
         state.query = ""
-        state.selection = max(0, model.index(of: model.viewState.lastCheetID) ?? 0)
+        state.selection = model.workspaces.count + max(0, model.index(of: model.viewState.lastCheetID) ?? 0)
         let mouse = NSEvent.mouseLocation
         let screen = NSScreen.screens.first { NSMouseInRect(mouse, $0.frame, false) } ?? NSScreen.main ?? NSScreen.screens[0]
         let visible = screen.visibleFrame
@@ -64,10 +77,14 @@ final class PickerController: NSObject, NSWindowDelegate {
         panel.orderOut(nil)
     }
 
-    func results() -> [(index: Int, cheet: Cheet)] {
+    /// Matching workspaces first, then cheets (best title matches first).
+    func results() -> [PickerItem] {
         let tokens = CheetSearchIndex.tokens(for: state.query)
+        let workspaces = model.workspaces.filter { workspace in
+            tokens.allSatisfy { workspace.name.searchFolded.contains($0) }
+        }.map(PickerItem.workspace)
         let all = model.cheets.enumerated().map { (index: $0.offset, cheet: $0.element) }
-        guard !tokens.isEmpty else { return all }
+        guard !tokens.isEmpty else { return workspaces + all.map { .cheet(index: $0.index, cheet: $0.cheet) } }
         let scored = all.compactMap { item -> (Int, (index: Int, cheet: Cheet))? in
             let title = item.cheet.title.searchFolded
             let sections = item.cheet.sections.map { $0.title.searchFolded }.joined(separator: " ")
@@ -78,18 +95,30 @@ final class PickerController: NSObject, NSWindowDelegate {
             if tokens.allSatisfy({ title.contains($0) }) { score += 50 }
             return (score, item)
         }
-        return scored.sorted { $0.0 > $1.0 || ($0.0 == $1.0 && $0.1.index < $1.1.index) }.map(\.1)
+        let cheets = scored.sorted { $0.0 > $1.0 || ($0.0 == $1.0 && $0.1.index < $1.1.index) }
+            .map { PickerItem.cheet(index: $0.1.index, cheet: $0.1.cheet) }
+        return workspaces + cheets
     }
 
-    func choose(_ id: UUID) {
+    /// The row selected when the query changes: the first matching cheet, so typing a cheet's name and
+    /// pressing Return opens it even when a workspace (listed first) also matches.
+    func defaultSelection() -> Int {
+        guard !state.query.trimmingCharacters(in: .whitespaces).isEmpty else { return 0 }
+        return results().firstIndex { if case .cheet = $0 { return true } else { return false } } ?? 0
+    }
+
+    func choose(_ item: PickerItem, alongside: Bool = false) {
         hide()
-        onChoose?(id)
+        switch item {
+        case .workspace(let workspace): onRecall?(workspace.id)
+        case .cheet(_, let cheet): onChoose?(cheet.id, alongside)
+        }
     }
 
-    func chooseSelection() {
+    func chooseSelection(alongside: Bool = false) {
         let list = results()
         guard list.indices.contains(state.selection) else { NSSound.beep(); return }
-        choose(list[state.selection].cheet.id)
+        choose(list[state.selection], alongside: alongside)
     }
 
     private func installMonitors() {
@@ -105,7 +134,7 @@ final class PickerController: NSObject, NSWindowDelegate {
             case KeyCodes.upArrow:
                 if count > 0 { self.state.selection = (self.state.selection - 1 + count) % count }
             case KeyCodes.returnKey, KeyCodes.keypadEnter:
-                self.chooseSelection()
+                self.chooseSelection(alongside: event.modifierFlags.contains(.shift))
             default:
                 return event
             }
@@ -146,7 +175,7 @@ struct PickerView: View {
                     .textFieldStyle(.plain)
                     .font(.system(size: 20, weight: .regular))
                     .focused($focused)
-                    .onChange(of: state.query) { state.selection = 0 }
+                    .onChange(of: state.query) { state.selection = controller.defaultSelection() }
                 Text("\(model.cheets.count) cheets")
                     .font(.caption)
                     .foregroundStyle(.tertiary)
@@ -169,16 +198,20 @@ struct PickerView: View {
             ScrollViewReader { proxy in
                 ScrollView {
                     LazyVStack(spacing: 2) {
-                        ForEach(Array(results.enumerated()), id: \.element.cheet.id) { position, item in
-                            PickerRow(
-                                number: item.index + 1,
-                                cheet: item.cheet,
-                                combo: model.combo(forCheet: item.cheet.id),
-                                isSelected: position == state.selection,
-                                accent: appearance.accent.color
-                            )
-                            .id(item.cheet.id)
-                            .onTapGesture { controller.choose(item.cheet.id) }
+                        ForEach(Array(results.enumerated()), id: \.element.id) { position, item in
+                            Group {
+                                switch item {
+                                case .workspace(let workspace):
+                                    WorkspacePickerRow(workspace: workspace, cheets: model.cheets,
+                                                       combo: model.hotkeyPlan.combo(for: .recallWorkspace(workspace.id)),
+                                                       isSelected: position == state.selection, accent: appearance.accent.color)
+                                case .cheet(let index, let cheet):
+                                    PickerRow(number: index + 1, cheet: cheet, combo: model.combo(forCheet: cheet.id),
+                                              isSelected: position == state.selection, accent: appearance.accent.color)
+                                }
+                            }
+                            .id(item.id)
+                            .onTapGesture { controller.choose(item, alongside: NSEvent.modifierFlags.contains(.shift)) }
                             .onHover { if $0 { state.selection = position } }
                         }
                         if results.isEmpty {
@@ -191,7 +224,7 @@ struct PickerView: View {
                 }
                 .onChange(of: state.selection) {
                     if results.indices.contains(state.selection) {
-                        proxy.scrollTo(results[state.selection].cheet.id)
+                        proxy.scrollTo(results[state.selection].id)
                     }
                 }
             }
@@ -199,6 +232,7 @@ struct PickerView: View {
             Rectangle().fill(Color.primary.opacity(0.08)).frame(height: 0.5)
             HStack(spacing: 14) {
                 Label("open", systemImage: "return")
+                Label("alongside", systemImage: "shift")
                 Label("move", systemImage: "arrow.up.arrow.down")
                 Label("close", systemImage: "escape")
                 Spacer()
@@ -220,6 +254,40 @@ struct PickerView: View {
         .onChange(of: state.focusRequest) {
             DispatchQueue.main.async { focused = true }
         }
+    }
+}
+
+private struct WorkspacePickerRow: View {
+    let workspace: Workspace
+    let cheets: [Cheet]
+    let combo: KeyCombo?
+    let isSelected: Bool
+    let accent: Color
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "square.stack.3d.up")
+                .font(.system(size: 13, weight: .semibold))
+                .frame(width: 26, height: 26)
+                .background(RoundedRectangle(cornerRadius: 7, style: .continuous).fill(accent.opacity(isSelected ? 0.35 : 0.15)))
+            VStack(alignment: .leading, spacing: 2) {
+                Text(workspace.name).font(.system(size: 14, weight: .semibold)).lineLimit(1)
+                Text(workspace.windows.compactMap { window in cheets.first { $0.id == window.cheetID }?.title }.joined(separator: " · "))
+                    .font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(1)
+            }
+            Spacer()
+            if let combo {
+                Text(combo.displayString)
+                    .font(.system(size: 12, weight: .medium, design: .rounded))
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 6).padding(.vertical, 2)
+                    .background(Capsule().fill(Color.primary.opacity(0.08)))
+            }
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 7)
+        .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(isSelected ? Color.primary.opacity(0.12) : .clear))
+        .contentShape(Rectangle())
     }
 }
 

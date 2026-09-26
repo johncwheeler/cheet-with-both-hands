@@ -25,55 +25,157 @@ enum DebugSnapshots {
             for (index, cheet) in controller.model.cheets.enumerated() {
                 overlay.show(cheetID: cheet.id, focus: false)
                 await pause(0.7)
-                shot(overlay.window, "overlay-\(index + 1)")
+                shot(overlay.activeWindow!.window, "overlay-\(index + 1)")
                 if index >= 1 { break }
             }
             if controller.model.cheets.count > 1 {
                 overlay.show(cheetID: controller.model.cheets[1].id, focus: false)
-                overlay.state.query = "screen"
+                overlay.activeWindow!.state.query = "screen"
                 await pause(0.6)
-                shot(overlay.window, "overlay-filtered")
-                overlay.state.query = ""
+                shot(overlay.activeWindow!.window, "overlay-filtered")
+                overlay.activeWindow!.state.query = ""
             }
             // Keyboard scrolling, driven through the real key-event path.
             if let first = controller.model.cheets.first {
                 overlay.show(cheetID: first.id, focus: false)
                 await pause(0.5)
-                overlay.window.setFrame(NSRect(x: 160, y: 160, width: 820, height: 380), display: true)
+                overlay.activeWindow!.window.setFrame(NSRect(x: 160, y: 160, width: 820, height: 380), display: true)
                 await pause(0.5)
                 @MainActor func press(_ code: UInt32, _ function: Int, _ modifiers: NSEvent.ModifierFlags = []) async {
                     let chars = UnicodeScalar(UInt32(function)).map { String(Character($0)) } ?? ""
                     if let event = NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: modifiers.union([.function, .numericPad]),
-                                                    timestamp: ProcessInfo.processInfo.systemUptime, windowNumber: overlay.window.windowNumber,
+                                                    timestamp: ProcessInfo.processInfo.systemUptime, windowNumber: overlay.activeWindow!.window.windowNumber,
                                                     context: nil, characters: chars, charactersIgnoringModifiers: chars,
                                                     isARepeat: false, keyCode: UInt16(code)) {
                         NSApp.postEvent(event, atStart: false)
                     }
                     await pause(0.5)
                 }
-                var log = ["start \(Int(overlay.scrollOffset))"]
-                await press(KeyCodes.downArrow, NSDownArrowFunctionKey); log.append("↓ \(Int(overlay.scrollOffset))")
-                await press(KeyCodes.downArrow, NSDownArrowFunctionKey); log.append("↓ \(Int(overlay.scrollOffset))")
-                await press(KeyCodes.pageDown, NSPageDownFunctionKey); log.append("PgDn \(Int(overlay.scrollOffset))")
-                await press(KeyCodes.downArrow, NSDownArrowFunctionKey, .command); log.append("⌘↓ \(Int(overlay.scrollOffset))")
-                overlay.outerScroller?.enclosingScrollView?.flashScrollers() // overlay scrollers hide when idle
+                var log = ["start \(Int(overlay.activeWindow!.scrollOffset))"]
+                await press(KeyCodes.downArrow, NSDownArrowFunctionKey); log.append("↓ \(Int(overlay.activeWindow!.scrollOffset))")
+                await press(KeyCodes.downArrow, NSDownArrowFunctionKey); log.append("↓ \(Int(overlay.activeWindow!.scrollOffset))")
+                await press(KeyCodes.pageDown, NSPageDownFunctionKey); log.append("PgDn \(Int(overlay.activeWindow!.scrollOffset))")
+                await press(KeyCodes.downArrow, NSDownArrowFunctionKey, .command); log.append("⌘↓ \(Int(overlay.activeWindow!.scrollOffset))")
+                overlay.activeWindow!.outerScroller?.enclosingScrollView?.flashScrollers() // overlay scrollers hide when idle
                 await pause(0.15)
-                shot(overlay.window, "overlay-scrolled-bottom")
-                await press(KeyCodes.upArrow, NSUpArrowFunctionKey, .option); log.append("⌥↑ \(Int(overlay.scrollOffset))")
-                await press(KeyCodes.upArrow, NSUpArrowFunctionKey); log.append("↑ \(Int(overlay.scrollOffset))")
-                await press(KeyCodes.upArrow, NSUpArrowFunctionKey, .command); log.append("⌘↑ \(Int(overlay.scrollOffset))")
+                shot(overlay.activeWindow!.window, "overlay-scrolled-bottom")
+                await press(KeyCodes.upArrow, NSUpArrowFunctionKey, .option); log.append("⌥↑ \(Int(overlay.activeWindow!.scrollOffset))")
+                await press(KeyCodes.upArrow, NSUpArrowFunctionKey); log.append("↑ \(Int(overlay.activeWindow!.scrollOffset))")
+                await press(KeyCodes.upArrow, NSUpArrowFunctionKey, .command); log.append("⌘↑ \(Int(overlay.activeWindow!.scrollOffset))")
                 print("keyboard scroll: " + log.joined(separator: " → "))
-                print("outer scroller: \(overlay.outerScroller.map { String(describing: type(of: $0)) } ?? "none")")
+                print("outer scroller: \(overlay.activeWindow!.outerScroller.map { String(describing: type(of: $0)) } ?? "none")")
 
                 // ⇧→ / ⇧← step through the cheets.
-                @MainActor func position() -> String { controller.model.index(of: overlay.state.cheetID).map { "\($0 + 1)" } ?? "-" }
+                @MainActor func position() -> String { controller.model.index(of: overlay.activeWindow!.state.cheetID).map { "\($0 + 1)" } ?? "-" }
                 var steps = ["start \(position())"]
                 await press(KeyCodes.rightArrow, NSRightArrowFunctionKey, .shift); steps.append("⇧→ \(position())")
                 await press(KeyCodes.leftArrow, NSLeftArrowFunctionKey, .shift); steps.append("⇧← \(position())")
                 await press(KeyCodes.leftArrow, NSLeftArrowFunctionKey, .shift); steps.append("⇧← \(position())")
                 print("cheet stepping: " + steps.joined(separator: " → "))
-                print("outer scroller after switching: \(overlay.outerScroller.map { String(describing: type(of: $0)) } ?? "none")")
-                overlay.hide(animated: false)
+                print("outer scroller after switching: \(overlay.activeWindow!.outerScroller.map { String(describing: type(of: $0)) } ?? "none")")
+
+                // Several windows: alongside adds, a plain tap replaces, key repeat doesn't duplicate.
+                if controller.model.cheets.count >= 3 {
+                    let ids = controller.model.cheets.prefix(3).map(\.id)
+                    overlay.hide()
+                    await pause(0.3)
+                    overlay.hotkeyPressed(cheetID: ids[0], alongside: false); overlay.hotkeyReleased(cheetID: ids[0])
+                    overlay.hotkeyPressed(cheetID: ids[1], alongside: true)
+                    overlay.hotkeyPressed(cheetID: ids[1], alongside: true) // auto-repeat
+                    overlay.hotkeyReleased(cheetID: ids[1])
+                    await pause(0.4)
+                    print("alongside: \(overlay.windows.count) windows")
+                    overlay.hotkeyPressed(cheetID: ids[2], alongside: false); overlay.hotkeyReleased(cheetID: ids[2])
+                    await pause(0.4)
+                    let open = overlay.windows.compactMap(\.cheetID).map { id in controller.model.index(of: id).map { $0 + 1 } ?? 0 }
+                    print("replace: \(overlay.windows.count) windows showing cheets \(open)")
+                    overlay.show(cheetID: ids[1], alongside: true, focus: false)
+                    await pause(0.4)
+                    overlay.tile()
+                    await pause(0.5)
+                    @MainActor func frames() -> String {
+                        overlay.windows.map { w in "\(Int(w.frame.minX)),\(Int(w.frame.minY)) \(Int(w.frame.width))×\(Int(w.frame.height))" }.joined(separator: " | ")
+                    }
+                    print("tiled: \(frames())")
+                    for (index, window) in overlay.windows.enumerated() { shot(window.window, "tiled-\(index + 1)") }
+                    overlay.toggleStash()
+                    await pause(0.5)
+                    let visible = overlay.windows.map { w -> String in
+                        let screen = w.window.screen?.visibleFrame ?? .zero
+                        let inside = w.window.frame.intersection(screen)
+                        return "\(Int(inside.width))×\(Int(inside.height))"
+                    }
+                    print("stashed: visible slivers \(visible)")
+                    overlay.toggleStash()
+                    await pause(0.5)
+                    print("unstashed: \(frames())")
+                    overlay.saveWorkspace(named: "Snapshot Test")
+                    let saved = frames()
+                    overlay.hide()
+                    await pause(0.4)
+                    if let id = controller.model.workspaces.first(where: { $0.name == "Snapshot Test" })?.id {
+                        overlay.recall(workspaceID: id)
+                        await pause(0.5)
+                        print("workspace: saved \(saved)")
+                        print("workspace: recalled \(frames())")
+                        controller.picker.state.query = "snap"
+                        let found = controller.picker.results().prefix(2).map { item -> String in
+                            if case .workspace(let workspace) = item { return "workspace “\(workspace.name)”" }
+                            return "cheet"
+                        }
+                        print("picker: \(found)")
+                        controller.picker.state.query = ""
+                    }
+                    controller.model.workspaces.removeAll { $0.name == "Snapshot Test" } // keep scratch libraries clean
+
+                    // Review-fix checks: each line prints what a user should get.
+                    overlay.stash()
+                    await pause(0.4)
+                    overlay.handleOutsideClick()
+                    await pause(0.4)
+                    print("outside click while stashed: \(overlay.windows.count) windows")
+                    if overlay.windows.isEmpty { overlay.toggleLast() } else { overlay.unstash() }
+                    await pause(0.5)
+
+                    let home = overlay.activeWindow!.frame
+                    overlay.stash()
+                    await pause(0.4)
+                    if let spare = controller.model.cheets.first(where: { !overlay.isShowing($0.id) }) {
+                        overlay.show(cheetID: spare.id, focus: false)
+                        await pause(0.6)
+                        let opened = overlay.window(showing: spare.id)?.window.frame ?? .zero
+                        print("replace while stashed: opened at home frame \(opened == home)")
+                    }
+
+                    let keyWindow = overlay.activeWindow!.window
+                    keyWindow.makeKeyAndOrderFront(nil)
+                    await pause(0.3)
+                    let keyBefore = keyWindow.isKeyWindow
+                    overlay.stash()
+                    await pause(0.4)
+                    print("stash releases focus: key before \(keyBefore), after \(keyWindow.isKeyWindow)")
+                    overlay.unstash()
+                    await pause(0.4)
+
+                    controller.model.workspaces.append(Workspace(name: "Snapshot Vim", windows: []))
+                    controller.picker.state.query = "vim"
+                    let pickerResults = controller.picker.results()
+                    if case .workspace = pickerResults[controller.picker.defaultSelection()] {
+                        print("picker 'vim' preselects: workspace")
+                    } else {
+                        print("picker 'vim' preselects: cheet")
+                    }
+                    controller.picker.state.query = ""
+                    controller.model.workspaces.removeAll { $0.name == "Snapshot Vim" }
+
+                    weak let released = overlay.activeWindow
+                    overlay.hide()
+                    await pause(0.8)
+                    print("closed windows released: \(released == nil)")
+                    overlay.hide()
+                    await pause(0.3)
+                }
+                overlay.hide()
                 await pause(0.3)
             }
 
@@ -93,18 +195,18 @@ enum DebugSnapshots {
                 controller.model.update(cheet)
                 overlay.show(cheetID: cheet.id, focus: false)
                 await pause(0.6)
-                shot(overlay.window, "overlay-custom")
-                overlay.beginEditing()
-                overlay.select(cheet.sections[2].id)
+                shot(overlay.activeWindow!.window, "overlay-custom")
+                overlay.activeWindow!.beginEditing()
+                overlay.activeWindow!.select(cheet.sections[2].id)
                 await pause(0.6)
-                shot(overlay.window, "overlay-editing")
-                overlay.setLiveResize(LiveResize(id: cheet.sections[2].id, width: .columns(2), height: 220))
+                shot(overlay.activeWindow!.window, "overlay-editing")
+                overlay.activeWindow!.setLiveResize(LiveResize(id: cheet.sections[2].id, width: .columns(2), height: 220))
                 await pause(0.6)
-                shot(overlay.window, "overlay-resizing")
-                overlay.commitResize()
-                overlay.endEditing()
+                shot(overlay.activeWindow!.window, "overlay-resizing")
+                overlay.activeWindow!.commitResize()
+                overlay.activeWindow!.endEditing()
             }
-            overlay.hide(animated: false)
+            overlay.hide()
 
             var sampleStyle = CardStyle()
             sampleStyle.fontSize = 15
@@ -218,9 +320,9 @@ enum DebugSnapshots {
                     await waitFor({ sources.allSatisfy { ImageStore.shared.cached($0) != nil } }, timeout: 20)
                     overlay.show(cheetID: id, focus: false)
                     await pause(1.2)
-                    shot(overlay.window, name)
+                    shot(overlay.activeWindow!.window, name)
                     print("\(name): \(controller.model.cheet(id: id)?.sections.count ?? 0) sections, \(sources.count) images")
-                    overlay.hide(animated: false)
+                    overlay.hide()
                     await pause(0.3)
                 }
             }

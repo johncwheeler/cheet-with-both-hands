@@ -28,23 +28,32 @@ final class OverlayPanel: NSPanel {
         isMovableByWindowBackground = false
         becomesKeyOnlyIfNeeded = false
         worksWhenModal = true
-        minSize = NSSize(width: 360, height: 220)
+        minSize = Self.minimumSize
         collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .ignoresCycle]
     }
 
-    override var canBecomeKey: Bool { true }
+    static let minimumSize = NSSize(width: 360, height: 220)
+    /// Stashed windows don't take keyboard focus.
+    var acceptsKey = true
+    override var canBecomeKey: Bool { acceptsKey }
     override var canBecomeMain: Bool { false }
+
+    /// AppKit keeps windows below the menu bar; stashing slides one past the top edge on purpose.
+    override func constrainFrameRect(_ frameRect: NSRect, to screen: NSScreen?) -> NSRect {
+        acceptsKey ? super.constrainFrameRect(frameRect, to: screen) : frameRect
+    }
 
     override func cancelOperation(_ sender: Any?) {
         onCancel?()
     }
 }
 
-/// Shows, hides, positions and animates the cheet overlay, and implements the
-/// tap-to-toggle / hold-to-peek trigger behaviour.
+/// One cheet window: shows, positions and animates it, and handles its keyboard, scrolling and
+/// layout editing. `CheetWindowManager` decides which windows exist.
 @MainActor
-final class OverlayController: NSObject, NSWindowDelegate {
+final class CheetWindowController: NSObject, NSWindowDelegate {
     let model: AppModel
+    unowned let manager: CheetWindowManager
     let state = OverlayState()
     let editState = LayoutEditState()
 
@@ -54,13 +63,9 @@ final class OverlayController: NSObject, NSWindowDelegate {
     /// Set when the user drags or resizes the overlay; only then is the frame remembered.
     private var userAdjustedFrame = false
     private var keyMonitor: Any?
-    private var outsideClickMonitor: Any?
     private var toastTask: Task<Void, Never>?
     private var frameSaveTask: Task<Void, Never>?
     private var searchIndexes: [UUID: (updatedAt: Date, index: CheetSearchIndex)] = [:]
-
-    /// The in-flight hotkey press, for hold-to-peek.
-    private var activePress: (cheetID: UUID, time: Date, hidOnPress: Bool)?
 
     /// The cheet's outer scroll view (not the scroll views inside fixed-height cards).
     private weak var outerScrollView: NSScrollView?
@@ -75,8 +80,9 @@ final class OverlayController: NSObject, NSWindowDelegate {
     var isVisible: Bool { state.isVisible }
     var window: NSWindow { panel }
 
-    init(model: AppModel) {
+    init(model: AppModel, manager: CheetWindowManager) {
         self.model = model
+        self.manager = manager
         super.init()
 
         let root = OverlayRootView(model: model, state: state, controller: self)
@@ -87,132 +93,125 @@ final class OverlayController: NSObject, NSWindowDelegate {
         panel.onCancel = { [weak self] in self?.handleEscape() }
         panel.onUserResize = { [weak self] in self?.userAdjustedFrame = true }
 
-        model.addSettingsObserver { [weak self] old, new in
-            guard let self else { return }
-            self.applyWindowProperties()
-            if old.layout != new.layout { self.relayoutIfVisible() }
-            if old.behavior.dismissOnOutsideClick != new.behavior.dismissOnOutsideClick, self.state.isVisible {
-                self.installMonitors()
-            }
+    }
+
+    // MARK: - Showing, switching and closing
+
+    var cheetID: UUID? { state.cheetID }
+    /// Where the window sits when it isn't stashed.
+    private(set) var homeFrame: NSRect?
+    var isStashed: Bool { homeFrame != nil }
+    /// The window's frame, or its home frame while stashed (for tiling, workspaces and hide).
+    var frame: NSRect { homeFrame ?? animationTarget ?? panel.frame }
+    /// Where an in-flight frame animation is heading (the panel's own frame lags behind it).
+    private var animationTarget: NSRect?
+    private var frameAnimation = 0
+
+    func stash(to stashed: NSRect) {
+        guard !isStashed else { return }
+        if editState.isEditing { endEditing() }
+        homeFrame = frame
+        state.isStashed = true
+        panel.acceptsKey = false
+        if panel.isKeyWindow {
+            // resignKey() is only a notification; ordering the panel out and back in actually gives up
+            // key status, so typing goes back to the app underneath (acceptsKey is already false).
+            panel.orderOut(nil)
+            panel.orderFrontRegardless()
         }
+        setFrame(stashed, animate: true, remember: false)
     }
 
-    // MARK: - Hotkey trigger behaviour
-
-    func hotkeyPressed(cheetID: UUID) {
-        guard activePress?.cheetID != cheetID else { return } // ignore key repeat
-        let sameCheetVisible = state.isVisible && state.cheetID == cheetID
-        switch model.settings.behavior.trigger {
-        case .toggle:
-            sameCheetVisible ? hide() : show(cheetID: cheetID)
-            activePress = (cheetID, Date(), sameCheetVisible)
-        case .hold:
-            show(cheetID: cheetID, focus: false)
-            activePress = (cheetID, Date(), false)
-        case .smart:
-            if sameCheetVisible { hide() } else { show(cheetID: cheetID) }
-            activePress = (cheetID, Date(), sameCheetVisible)
-        }
+    func unstash(to home: NSRect) {
+        guard isStashed else { return }
+        homeFrame = nil
+        state.isStashed = false
+        panel.acceptsKey = true
+        setFrame(home, animate: true, remember: false)
     }
 
-    func hotkeyReleased(cheetID: UUID) {
-        guard let press = activePress, press.cheetID == cheetID else { return }
-        activePress = nil
-        let held = Date().timeIntervalSince(press.time)
-        switch model.settings.behavior.trigger {
-        case .toggle:
-            break
-        case .hold:
-            if state.cheetID == cheetID { hide() }
-        case .smart:
-            // A long press was a peek: put it away on release. A tap leaves it pinned.
-            if !press.hidOnPress, held >= model.settings.behavior.holdThreshold, state.cheetID == cheetID { hide() }
-        }
-    }
-
-    func toggle(cheetID: UUID) {
-        if state.isVisible && state.cheetID == cheetID { hide() } else { show(cheetID: cheetID) }
-    }
-
-    func toggleLast() {
-        if state.isVisible { hide(); return }
-        let id = model.cheet(id: model.viewState.lastCheetID)?.id ?? model.cheets.first?.id
-        if let id { show(cheetID: id) } else { showEmpty() }
-    }
-
-    // MARK: - Show / hide
-
-    func show(cheetID: UUID, focus: Bool? = nil) {
-        guard model.cheet(id: cheetID) != nil else { return }
-        let wasVisible = state.isVisible
-        let previous = state.cheetID
-        if previous != cheetID {
-            state.query = ""
-            state.showControls = false
-            resetEditHistory()
-            editState.selectedID = nil
-        }
+    /// Loads a cheet into this window, resetting per-cheet state when it changes.
+    private func load(_ cheetID: UUID?) {
+        guard state.cheetID != cheetID || cheetID == nil else { return }
+        state.query = ""
+        state.showControls = false
+        resetEditHistory()
+        editState.selectedID = nil
         state.cheetID = cheetID
-        model.viewState.lastCheetID = cheetID
-        present(wasVisible: wasVisible, cheetChanged: previous != cheetID, focus: focus)
+        if let cheetID { model.viewState.lastCheetID = cheetID }
     }
 
-    /// Shows the overlay's empty state (no cheets in the library).
-    func showEmpty() {
-        state.cheetID = nil
-        present(wasVisible: state.isVisible, cheetChanged: true, focus: true)
-    }
-
-    private func present(wasVisible: Bool, cheetChanged: Bool, focus: Bool?) {
+    /// Shows the window for the first time with `cheetID` (nil = the empty-library state) at `frame`.
+    func open(cheetID: UUID?, at frame: NSRect, focus: Bool?) {
+        load(cheetID)
         applyWindowProperties()
         let behavior = model.settings.behavior
-        let takeFocus = (editState.isEditing || ((focus ?? behavior.takeFocus) && !behavior.ghostMode)) && !DebugSnapshots.isRequested
-
-        if !wasVisible {
-            hideGeneration += 1
-            let target = targetFrame(for: state.cheetID)
-            let opacity = model.appearance(for: state.cheetID).windowOpacity
-            let fade = behavior.fadeDuration
-
-            isAnimatingFrame = true
-            panel.setFrame(fade > 0 ? target.offsetBy(dx: 0, dy: -10) : target, display: false)
-            panel.alphaValue = fade > 0 ? 0 : opacity
-            if takeFocus { panel.makeKeyAndOrderFront(nil) } else { panel.orderFrontRegardless() }
-            state.isVisible = true
-            installMonitors()
-
-            NSAnimationContext.runAnimationGroup({ context in
-                context.duration = fade
-                context.timingFunction = CAMediaTimingFunction(name: .easeOut)
-                panel.animator().alphaValue = opacity
-                if fade > 0 { panel.animator().setFrame(target, display: true) }
-            }, completionHandler: { [weak self] in
-                MainActor.assumeIsolated {
-                    self?.isAnimatingFrame = false
-                    self?.panel.invalidateShadow()
-                }
-            })
-        } else {
-            if cheetChanged, model.settings.layout.perCheetFrames, model.settings.layout.rememberFrame {
-                setFrame(targetFrame(for: state.cheetID), animate: true)
+        let takeFocus = (focus ?? behavior.takeFocus) && !behavior.ghostMode && !DebugSnapshots.isRequested
+        hideGeneration += 1
+        let opacity = model.appearance(for: state.cheetID).windowOpacity
+        let fade = behavior.fadeDuration
+        isAnimatingFrame = true
+        animationTarget = frame
+        frameAnimation += 1
+        let animation = frameAnimation
+        panel.setFrame(fade > 0 ? frame.offsetBy(dx: 0, dy: -10) : frame, display: false)
+        panel.alphaValue = fade > 0 ? 0 : opacity
+        if takeFocus { panel.makeKeyAndOrderFront(nil) } else { panel.orderFrontRegardless() }
+        state.isVisible = true
+        installMonitors()
+        NSAnimationContext.runAnimationGroup({ context in
+            context.duration = fade
+            context.timingFunction = CAMediaTimingFunction(name: .easeOut)
+            panel.animator().alphaValue = opacity
+            if fade > 0 { panel.animator().setFrame(frame, display: true) }
+        }, completionHandler: { [weak self] in
+            MainActor.assumeIsolated {
+                guard let self else { return }
+                if self.frameAnimation == animation { self.animationTarget = nil }
+                self.isAnimatingFrame = false
+                self.panel.invalidateShadow()
             }
-            if takeFocus, !panel.isKeyWindow { panel.makeKeyAndOrderFront(nil) }
-            panel.invalidateShadow()
-        }
-        if takeFocus, !editState.isEditing { state.focusSearchRequest += 1 }
+        })
+        if takeFocus { state.focusSearchRequest += 1 }
     }
 
-    func hide(animated: Bool = true) {
+    /// Swaps this window's cheet in place (header menu, ⌘[ ], ⇧←/⇧→, ⌘1–9).
+    func switchTo(cheetID: UUID) {
+        guard model.cheet(id: cheetID) != nil, cheetID != state.cheetID else { return }
+        if let owner = manager.window(showing: cheetID), owner !== self {
+            manager.show(cheetID: cheetID) // already open elsewhere: bring that window forward
+            return
+        }
+        load(cheetID)
+        applyWindowProperties()
+        let layout = model.settings.layout
+        if layout.perCheetFrames, layout.rememberFrame {
+            setFrame(manager.presetFrame(for: cheetID), animate: true, remember: false)
+        }
+    }
+
+    /// Brings the window forward, optionally taking keyboard focus for filtering.
+    func focus(_ takeFocus: Bool) {
+        let behavior = model.settings.behavior
+        if takeFocus, !behavior.ghostMode, !DebugSnapshots.isRequested {
+            panel.makeKeyAndOrderFront(nil)
+            if !editState.isEditing { state.focusSearchRequest += 1 }
+        } else {
+            panel.orderFrontRegardless()
+        }
+    }
+
+    /// Fades the window out and closes it. The manager forgets it straight away.
+    func close(animated: Bool = true) {
         guard state.isVisible else { return }
         if editState.isEditing { endEditing() }
         state.isVisible = false
         state.showControls = false
-        activePress = nil
         hideGeneration += 1
         let generation = hideGeneration
         removeMonitors()
         flushFrameSave()
-
+        manager.windowWillClose(self)
         let fade = animated ? model.settings.behavior.fadeDuration : 0
         NSAnimationContext.runAnimationGroup({ context in
             context.duration = fade
@@ -222,7 +221,10 @@ final class OverlayController: NSObject, NSWindowDelegate {
             MainActor.assumeIsolated {
                 guard let self, self.hideGeneration == generation else { return }
                 self.panel.orderOut(nil)
-                self.state.query = ""
+                // The panel's SwiftUI root holds this controller; drop it so the closed window is freed.
+                self.panel.contentView = nil
+                self.panel.delegate = nil
+                self.manager.windowDidFinishClosing(self)
             }
         })
     }
@@ -230,15 +232,12 @@ final class OverlayController: NSObject, NSWindowDelegate {
     // MARK: - Navigation & actions (used by the view and keyboard handling)
 
     func step(_ delta: Int) {
-        guard !model.cheets.isEmpty else { return }
-        let current = model.index(of: state.cheetID) ?? 0
-        let next = (current + delta + model.cheets.count) % model.cheets.count
-        show(cheetID: model.cheets[next].id)
+        if let next = manager.neighbour(of: state.cheetID, delta: delta, for: self) { switchTo(cheetID: next) }
     }
 
     func select(index: Int) {
         guard model.cheets.indices.contains(index) else { NSSound.beep(); return }
-        show(cheetID: model.cheets[index].id)
+        switchTo(cheetID: model.cheets[index].id)
     }
 
     func adjustFontSize(_ delta: Double) {
@@ -310,12 +309,7 @@ final class OverlayController: NSObject, NSWindowDelegate {
         } else {
             model.viewState.globalFrame = nil
         }
-        setFrame(targetFrame(for: state.cheetID), animate: true)
-    }
-
-    func relayoutIfVisible() {
-        guard state.isVisible else { return }
-        setFrame(targetFrame(for: state.cheetID), animate: true)
+        setFrame(manager.presetFrame(for: state.cheetID), animate: true, remember: false)
     }
 
     // MARK: - Window properties & geometry
@@ -334,63 +328,31 @@ final class OverlayController: NSObject, NSWindowDelegate {
         panel.invalidateShadow()
     }
 
-    private func screenForPresentation() -> NSScreen {
-        switch model.settings.layout.screen {
-        case .mouse:
-            let mouse = NSEvent.mouseLocation
-            return NSScreen.screens.first { NSMouseInRect(mouse, $0.frame, false) } ?? NSScreen.main ?? NSScreen.screens[0]
-        case .focused:
-            return NSScreen.main ?? NSScreen.screens[0]
-        case .primary:
-            return NSScreen.screens.first ?? NSScreen.main!
-        }
-    }
-
-    func targetFrame(for cheetID: UUID?) -> NSRect {
-        let visible = screenForPresentation().visibleFrame
-        let layout = model.settings.layout
-
-        if layout.rememberFrame {
-            let saved = layout.perCheetFrames ? cheetID.flatMap { model.viewState[cheet: $0].frame } : model.viewState.globalFrame
-            if let saved {
-                return clamp(saved.denormalized(in: visible), to: visible)
-            }
-        }
-
-        let margin = CGFloat(layout.margin)
-        let width = min(max(panel.minSize.width, visible.width * layout.widthFraction), visible.width - 2 * margin)
-        let height = min(max(panel.minSize.height, visible.height * layout.heightFraction), visible.height - 2 * margin)
-        let unit = layout.anchor.unitPosition
-        let x = visible.minX + margin + (visible.width - 2 * margin - width) * unit.x
-        let y = visible.minY + margin + (visible.height - 2 * margin - height) * unit.y
-        return NSRect(x: x, y: y, width: width, height: height).integral
-    }
-
-    private func clamp(_ rect: NSRect, to container: NSRect) -> NSRect {
-        var r = rect
-        r.size.width = min(max(r.width, panel.minSize.width), container.width)
-        r.size.height = min(max(r.height, panel.minSize.height), container.height)
-        r.origin.x = min(max(r.minX, container.minX), container.maxX - r.width)
-        r.origin.y = min(max(r.minY, container.minY), container.maxY - r.height)
-        return r.integral
-    }
-
-    private func setFrame(_ frame: NSRect, animate: Bool) {
+    /// Moves the window. `remember` saves the result as a remembered position (like a user drag).
+    func setFrame(_ frame: NSRect, animate: Bool, remember: Bool) {
+        if remember { userAdjustedFrame = true }
         isAnimatingFrame = true
+        animationTarget = frame
+        frameAnimation += 1
+        let animation = frameAnimation
         NSAnimationContext.runAnimationGroup({ context in
-            context.duration = animate ? 0.2 : 0
+            context.duration = animate ? 0.25 : 0
             context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
             panel.animator().setFrame(frame, display: true)
         }, completionHandler: { [weak self] in
             MainActor.assumeIsolated {
-                self?.isAnimatingFrame = false
-                self?.panel.invalidateShadow()
+                guard let self else { return }
+                if self.frameAnimation == animation { self.animationTarget = nil }
+                self.isAnimatingFrame = false
+                self.panel.invalidateShadow()
+                if remember { self.saveFrame() }
             }
         })
     }
 
     // MARK: - NSWindowDelegate (remember user moves/resizes)
 
+    func windowDidBecomeKey(_ notification: Notification) { manager.windowDidBecomeActive(self) }
     func windowWillMove(_ notification: Notification) { userAdjustedFrame = true }
     func windowWillStartLiveResize(_ notification: Notification) { userAdjustedFrame = true }
     func windowDidMove(_ notification: Notification) { scheduleFrameSave() }
@@ -400,7 +362,7 @@ final class OverlayController: NSObject, NSWindowDelegate {
     }
 
     private func scheduleFrameSave() {
-        guard userAdjustedFrame, !isAnimatingFrame, state.isVisible, model.settings.layout.rememberFrame else { return }
+        guard userAdjustedFrame, !isAnimatingFrame, !isStashed, state.isVisible, model.settings.layout.rememberFrame else { return }
         frameSaveTask?.cancel()
         frameSaveTask = Task { [weak self] in
             try? await Task.sleep(for: .milliseconds(300))
@@ -417,6 +379,7 @@ final class OverlayController: NSObject, NSWindowDelegate {
     }
 
     private func saveFrame() {
+        guard !isStashed else { return }
         frameSaveTask = nil
         guard userAdjustedFrame, model.settings.layout.rememberFrame, let screen = panel.screen else { return }
         userAdjustedFrame = false
@@ -436,21 +399,11 @@ final class OverlayController: NSObject, NSWindowDelegate {
             guard let self, event.window === self.panel else { return event }
             return self.handleKey(event) ? nil : event
         }
-        if model.settings.behavior.dismissOnOutsideClick {
-            outsideClickMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
-                MainActor.assumeIsolated {
-                    guard let self, !self.editState.isEditing else { return }
-                    self.hide()
-                }
-            }
-        }
     }
 
     private func removeMonitors() {
         if let keyMonitor { NSEvent.removeMonitor(keyMonitor) }
-        if let outsideClickMonitor { NSEvent.removeMonitor(outsideClickMonitor) }
         keyMonitor = nil
-        outsideClickMonitor = nil
     }
 
     private func handleEscape() {
@@ -459,7 +412,7 @@ final class OverlayController: NSObject, NSWindowDelegate {
         } else if !state.query.isEmpty {
             state.query = ""
         } else {
-            hide()
+            close()
         }
     }
 
@@ -584,6 +537,8 @@ final class OverlayController: NSObject, NSWindowDelegate {
         if flags == [.command, .option] {
             if keyCode == KeyCodes.leftArrow { step(-1); return true }
             if keyCode == KeyCodes.rightArrow { step(1); return true }
+            if keyCode == KeyCodes.t { manager.tile(); return true } // ⌥⌘T
+            if keyCode == KeyCodes.s { manager.promptSaveWorkspace(); return true } // ⌥⌘S
             if keyCode == KeyCodes.e { // ⌥⌘E edits the content (matched by key code since ⌥ changes the character)
                 if let id = state.cheetID { editCheet(id) }
                 return true
@@ -595,7 +550,7 @@ final class OverlayController: NSObject, NSWindowDelegate {
         case "f":
             state.focusSearchRequest += 1
         case "w", "q", "h":
-            hide() // never quit/hide the app from inside the overlay — just put it away
+            close() // never quit/hide the app from inside the overlay — just close this window
         case "[", "{":
             step(-1)
         case "]", "}":
@@ -623,7 +578,7 @@ final class OverlayController: NSObject, NSWindowDelegate {
 
 // MARK: - Layout editing
 
-extension OverlayController: LayoutEditing {
+extension CheetWindowController: LayoutEditing {
     private var currentCheet: Cheet? { model.cheet(id: state.cheetID) }
 
     func toggleEditing() {
@@ -646,12 +601,6 @@ extension OverlayController: LayoutEditing {
         editState.selectedID = nil
         editState.draggingID = nil
         applyWindowProperties()
-    }
-
-    /// Opens a cheet straight into layout editing (from Settings).
-    func editLayout(cheetID: UUID) {
-        show(cheetID: cheetID, focus: true)
-        beginEditing()
     }
 
     private func resetEditHistory() {

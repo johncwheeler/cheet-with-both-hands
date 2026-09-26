@@ -93,6 +93,64 @@ struct HotkeyResolverTests {
         #expect(HotkeyResolver.slotLabel(forIndex: 9) == "0")
         #expect(HotkeyResolver.slotLabel(forIndex: 10) == nil)
     }
+
+    @Test func shiftVariantsOpenCheetsAlongside() {
+        let list = cheets(2)
+        let plan = HotkeyResolver.resolve(cheets: list, settings: HotkeySettings())
+        let alongside = plan.combo(for: .showCheetAlongside(list[0].id))
+        #expect(alongside == KeyCombo(keyCode: KeyCodes.one, modifiers: [.control, .option, .command, .shift]))
+    }
+
+    @Test func noShiftVariantWhenTheComboAlreadyHasShift() {
+        var list = cheets(1)
+        list[0].hotkey = .custom(KeyCombo(keyCode: KeyCodes.k, modifiers: [.command, .shift]))
+        let plan = HotkeyResolver.resolve(cheets: list, settings: HotkeySettings())
+        #expect(plan.combo(for: .showCheetAlongside(list[0].id)) == nil)
+        #expect(plan.conflicts[.showCheetAlongside(list[0].id)] == nil)
+    }
+
+    @Test func shiftVariantsLoseToEverythingElse() {
+        var list = cheets(2)
+        // Cheet 2's custom combo is exactly cheet 1's Shift variant.
+        list[1].hotkey = .custom(KeyCombo(keyCode: KeyCodes.one, modifiers: [.control, .option, .command, .shift]))
+        let plan = HotkeyResolver.resolve(cheets: list, settings: HotkeySettings())
+        #expect(plan.cheetCombos[list[1].id]?.keyCode == KeyCodes.one)
+        #expect(plan.conflicts[.showCheetAlongside(list[0].id)] != nil)
+    }
+
+    @Test func shiftVariantsCanBeTurnedOff() {
+        var settings = HotkeySettings()
+        settings.shiftForAlongside = false
+        let list = cheets(1)
+        #expect(HotkeyResolver.resolve(cheets: list, settings: settings).combo(for: .showCheetAlongside(list[0].id)) == nil)
+    }
+
+    @Test func tileAndStashAreGlobalActionsThatBeatCheets() {
+        var settings = HotkeySettings()
+        settings.tile = KeyCombo(keyCode: KeyCodes.one, modifiers: [.control, .option, .command])
+        let list = cheets(1)
+        let plan = HotkeyResolver.resolve(cheets: list, settings: settings)
+        #expect(plan.combo(for: .tileWindows) == settings.tile)
+        #expect(plan.conflicts[.showCheet(list[0].id)] != nil)
+    }
+
+    @Test func stashDefaultsToControlOptionCommandH() {
+        let plan = HotkeyResolver.resolve(cheets: [], settings: HotkeySettings())
+        #expect(plan.combo(for: .stashWindows) == KeyCombo(keyCode: KeyCodes.h, modifiers: [.control, .option, .command]))
+    }
+
+    @Test func workspaceHotkeysBeatCheetsButNotGlobalActions() {
+        let list = cheets(1)
+        let base: ModifierSet = [.control, .option, .command]
+        let workspace = Workspace(name: "W", windows: [], hotkey: KeyCombo(keyCode: KeyCodes.one, modifiers: base))
+        let plan = HotkeyResolver.resolve(cheets: list, workspaces: [workspace], settings: HotkeySettings())
+        #expect(plan.combo(for: .recallWorkspace(workspace.id)) == workspace.hotkey)
+        #expect(plan.conflicts[.showCheet(list[0].id)] != nil)
+
+        let clash = Workspace(name: "Clash", windows: [], hotkey: KeyCombo(keyCode: KeyCodes.slash, modifiers: base))
+        let second = HotkeyResolver.resolve(cheets: [], workspaces: [clash], settings: HotkeySettings())
+        #expect(second.conflicts[.recallWorkspace(clash.id)] != nil) // the picker's ⌃⌥⌘/ wins
+    }
 }
 
 struct SearchTests {
@@ -139,8 +197,8 @@ struct StorageTests {
         }
         cheets[0].appearance = Appearance()
         cheets[1].hotkey = .custom(KeyCombo(keyCode: KeyCodes.k, modifiers: [.command, .shift]))
-        try store.saveCheets(cheets)
-        #expect(try store.loadCheets() == cheets)
+        try store.saveLibrary(Library(cheets: cheets))
+        #expect(try store.loadLibrary() == Library(cheets: cheets))
 
         var settings = AppSettings()
         settings.appearance.fontSize = 17

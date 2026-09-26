@@ -51,6 +51,10 @@ public struct HotkeySettings: Codable, Equatable, Sendable {
     public var picker: KeyCombo? = KeyCombo(keyCode: KeyCodes.slash, modifiers: [.control, .option, .command])
     public var toggleLast: KeyCombo? = KeyCombo(keyCode: KeyCodes.grave, modifiers: [.control, .option, .command])
     public var ghostMode: KeyCombo? = nil
+    public var tile: KeyCombo? = nil
+    public var stash: KeyCombo? = KeyCombo(keyCode: KeyCodes.h, modifiers: [.control, .option, .command])
+    /// Register each cheet's combo plus ⇧ to open it alongside the windows already showing.
+    public var shiftForAlongside = true
 
     public init() {}
 }

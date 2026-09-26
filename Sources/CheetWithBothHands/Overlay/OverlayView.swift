@@ -20,12 +20,14 @@ final class OverlayState {
     var focusSearchRequest = 0
     var isVisible = false
     var showControls = false
+    /// The window is stashed at a screen edge.
+    var isStashed = false
 }
 
 struct OverlayRootView: View {
     let model: AppModel
     @Bindable var state: OverlayState
-    let controller: OverlayController
+    let controller: CheetWindowController
 
     @FocusState private var searchFocused: Bool
 
@@ -75,6 +77,12 @@ struct OverlayRootView: View {
             }
             .frame(width: 18, height: 18)
             .padding(4)
+        }
+        .overlay {
+            // A stashed window is a sliver at the screen edge: any click brings every window back.
+            if state.isStashed {
+                Color.clear.contentShape(Rectangle()).onTapGesture { controller.manager.toggleStash() }
+            }
         }
         .foregroundStyle(appearance.textColor?.color ?? Color.primary)
         .background(GlassBackground(appearance: appearance))
@@ -182,7 +190,7 @@ struct OverlayRootView: View {
                     }
                 HeaderButton(symbol: "square.grid.2x2", help: "Cheet picker (⌘P)") { controller.openPicker() }
                 HeaderButton(symbol: "gearshape", help: "Settings (⌘,)") { controller.openSettings() }
-                HeaderButton(symbol: "xmark", help: "Close (Esc)") { controller.hide() }
+                HeaderButton(symbol: "xmark", help: "Close (Esc)") { controller.close() }
             }
         }
         .padding(.horizontal, 12)
@@ -194,7 +202,7 @@ struct OverlayRootView: View {
         Menu {
             ForEach(Array(model.cheets.enumerated()), id: \.element.id) { index, item in
                 Button {
-                    controller.show(cheetID: item.id)
+                    controller.switchTo(cheetID: item.id)
                 } label: {
                     let combo = model.combo(forCheet: item.id)?.displayString
                     Text("\(index + 1).  \(item.title)" + (combo.map { "   \($0)" } ?? ""))
@@ -202,6 +210,11 @@ struct OverlayRootView: View {
             }
             Divider()
             Button("Edit Layout") { controller.beginEditing() }
+            Button("Tile Cheet Windows") { controller.manager.tile() }
+            Button("Save Workspace…") { controller.manager.promptSaveWorkspace() }
+            if let workspace = controller.manager.currentWorkspace {
+                Button("Update “\(workspace.name)”") { controller.manager.updateCurrentWorkspace() }
+            }
             Button("Edit Content…") { if let id = cheet?.id { controller.editCheet(id) } }
             Button("New Cheet…") { controller.newCheet() }
         } label: {

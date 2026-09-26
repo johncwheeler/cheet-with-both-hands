@@ -8,7 +8,7 @@ final class AppController {
     static var shared: AppController!
 
     let model: AppModel
-    let overlay: OverlayController
+    let overlay: CheetWindowManager
     let picker: PickerController
     let windows: WindowManager
     private(set) var statusMenu: StatusMenuController!
@@ -25,7 +25,7 @@ final class AppController {
             store = LibraryStore()
         }
         model = AppModel(store: store)
-        overlay = OverlayController(model: model)
+        overlay = CheetWindowManager(model: model)
         picker = PickerController(model: model)
         windows = WindowManager(model: model)
     }
@@ -52,7 +52,8 @@ final class AppController {
         ImageStore.shared.prune(keeping: model.cheets)
         ImageStore.shared.prefetch(model.cheets)
         statusMenu = StatusMenuController(controller: self)
-        picker.onChoose = { [weak self] id in self?.overlay.show(cheetID: id) }
+        picker.onChoose = { [weak self] id, alongside in self?.overlay.show(cheetID: id, alongside: alongside) }
+        picker.onRecall = { [weak self] id in self?.overlay.recall(workspaceID: id) }
 
         let hotkeys = HotkeyCenter.shared
         hotkeys.install()
@@ -96,18 +97,30 @@ final class AppController {
         switch action {
         case .showCheet(let id):
             if picker.isVisible { picker.hide() }
-            overlay.hotkeyPressed(cheetID: id)
+            overlay.hotkeyPressed(cheetID: id, alongside: false)
+        case .showCheetAlongside(let id):
+            if picker.isVisible { picker.hide() }
+            overlay.hotkeyPressed(cheetID: id, alongside: true)
         case .showPicker:
             picker.toggle()
         case .toggleLastCheet:
             overlay.toggleLast()
         case .toggleGhostMode:
             toggleGhostMode()
+        case .tileWindows:
+            overlay.tile()
+        case .stashWindows:
+            overlay.toggleStash()
+        case .recallWorkspace(let id):
+            overlay.recall(workspaceID: id)
         }
     }
 
     private func handleRelease(_ action: HotkeyAction) {
-        if case .showCheet(let id) = action { overlay.hotkeyReleased(cheetID: id) }
+        switch action {
+        case .showCheet(let id), .showCheetAlongside(let id): overlay.hotkeyReleased(cheetID: id)
+        default: break
+        }
     }
 
     // MARK: - Commands
@@ -233,7 +246,7 @@ final class AppController {
     }
 
     func exportLibrary() {
-        guard let data = try? LibraryStore.encodeLibrary(model.cheets) else { return }
+        guard let data = try? LibraryStore.encodeLibrary(Library(cheets: model.cheets, workspaces: model.workspaces)) else { return }
         save(data: data, suggestedName: "Cheets Library.json", type: .json)
     }
 
@@ -243,14 +256,25 @@ final class AppController {
         panel.allowedContentTypes = [.json]
         guard panel.runModal() == .OK, let url = panel.url else { return }
         do {
-            let incoming = try LibraryStore.decodeCheets(from: Data(contentsOf: url))
+            let incoming = try LibraryStore.decodeLibrary(from: Data(contentsOf: url))
             let existing = Set(model.cheets.map(\.id))
-            var added = 0
-            for var cheet in incoming {
-                if existing.contains(cheet.id) { cheet.id = UUID() }
+            var renamed: [UUID: UUID] = [:]
+            for var cheet in incoming.cheets {
+                if existing.contains(cheet.id) {
+                    let fresh = UUID()
+                    renamed[cheet.id] = fresh
+                    cheet.id = fresh
+                }
                 model.add(cheet)
-                added += 1
             }
+            let known = Set(model.cheets.map(\.id))
+            for var workspace in incoming.workspaces {
+                workspace.id = UUID()
+                workspace.hotkey = nil // don't steal combos on import
+                workspace.windows = workspace.windows.map { var w = $0; w.cheetID = renamed[w.cheetID] ?? w.cheetID; return w }
+                model.workspaces.append(workspace.pruned(keeping: known))
+            }
+            let added = incoming.cheets.count
             showAlert("Imported \(added) cheet\(added == 1 ? "" : "s")", "They've been added to the end of your library.")
         } catch {
             showAlert("Couldn't read that library", error.localizedDescription)

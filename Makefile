@@ -20,7 +20,7 @@ run: app
 	@open "$(APP)"
 
 test:
-	@swift test $(TEST_FLAGS)
+	@swift test $(TEST_FLAGS) $(if $(FILTER),--filter $(FILTER))
 
 install: app
 	@rm -rf "/Applications/Cheet with Both Hands.app"

@@ -31,8 +31,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 }
 
-/// `cheetwithbothhands://show/2`, `…/toggle/git`, `…/picker`, `…/hide`, `…/import`, `…/settings`,
-/// `…/import-url?url=…`, `…/browse?q=…`.
+/// `cheetwithbothhands://show/2` (`?alongside=1` opens it alongside), `…/toggle/git`, `…/picker`, `…/hide`, `…/import`, `…/settings`,
+/// `…/import-url?url=…`, `…/browse?q=…`, `…/workspace/<name or number>`.
 enum URLCommands {
     @MainActor
     static func handle(_ url: URL) {
@@ -44,7 +44,9 @@ enum URLCommands {
 
         switch command {
         case "show", "open":
-            if let target { controller.overlay.show(cheetID: target.id) } else { controller.overlay.toggleLast() }
+            let alongside = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems?
+                .contains { $0.name == "alongside" && $0.value != "0" } ?? false
+            if let target { controller.overlay.show(cheetID: target.id, alongside: alongside) } else { controller.overlay.toggleLast() }
         case "toggle":
             if let target { controller.overlay.toggle(cheetID: target.id) } else { controller.overlay.toggleLast() }
         case "hide":
@@ -64,6 +66,12 @@ enum URLCommands {
             controller.openSettings()
         case "ghost":
             controller.toggleGhostMode()
+        case "workspace":
+            let name = argument ?? ""
+            let workspaces = controller.model.workspaces
+            let match = Int(name).flatMap { workspaces.indices.contains($0 - 1) ? workspaces[$0 - 1] : nil }
+                ?? workspaces.first { $0.name.caseInsensitiveCompare(name) == .orderedSame }
+            if let match { controller.overlay.recall(workspaceID: match.id) } else { NSSound.beep() }
         default:
             NSSound.beep()
         }

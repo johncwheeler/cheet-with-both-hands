@@ -4,7 +4,7 @@ import Observation
 import SwiftUI
 
 enum SettingsPane: String, CaseIterable, Identifiable {
-    case general, hotkeys, appearance, layout, cheets
+    case general, hotkeys, appearance, layout, cheets, workspaces
 
     var id: String { rawValue }
 
@@ -15,6 +15,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         case .appearance: "Appearance"
         case .layout: "Position & Size"
         case .cheets: "Cheets"
+        case .workspaces: "Workspaces"
         }
     }
 
@@ -25,6 +26,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         case .appearance: "paintpalette"
         case .layout: "rectangle.inset.filled.and.person.filled"
         case .cheets: "list.bullet.rectangle"
+        case .workspaces: "square.stack.3d.up"
         }
     }
 }
@@ -46,6 +48,7 @@ final class WindowManager: NSObject, NSWindowDelegate {
     private(set) var importerWindow: NSWindow?
     private(set) var webImportWindow: NSWindow?
     private(set) var browserWindow: NSWindow?
+    private(set) var namingWindow: NSWindow?
     private(set) var browserModel: CheatographyBrowserModel?
     private(set) var webImportModel: WebImportModel?
 
@@ -124,7 +127,24 @@ final class WindowManager: NSObject, NSWindowDelegate {
         }
     }
 
-    private var managedWindows: [NSWindow?] { [settingsWindow, importerWindow, webImportWindow, browserWindow] }
+    func showWorkspaceNaming(suggestedName: String, existingNames: [String], onSave: @escaping (String) -> Void) {
+        namingWindow?.close()
+        let view = WorkspaceNamingView(
+            existingNames: existingNames,
+            onSave: { [weak self] name in
+                self?.namingWindow?.close()
+                onSave(name)
+            },
+            onCancel: { [weak self] in self?.namingWindow?.close() },
+            name: suggestedName
+        )
+        let window = makeWindow(title: "Save Workspace", size: NSSize(width: 380, height: 170), autosave: "CWBHWorkspaceNaming", content: view)
+        window.styleMask.remove([.resizable, .miniaturizable])
+        namingWindow = window
+        present(window)
+    }
+
+    private var managedWindows: [NSWindow?] { [settingsWindow, importerWindow, webImportWindow, browserWindow, namingWindow] }
 
     private func hostingController<V: View>(for view: V) -> NSHostingController<V> {
         let hosting = NSHostingController(rootView: view)

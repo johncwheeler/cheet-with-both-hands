@@ -5,6 +5,10 @@ public enum HotkeyAction: Hashable, Sendable {
     case showPicker
     case toggleLastCheet
     case toggleGhostMode
+    case tileWindows
+    case stashWindows
+    case recallWorkspace(UUID)
+    case showCheetAlongside(UUID)
 }
 
 public struct HotkeyBinding: Hashable, Sendable {
@@ -44,7 +48,7 @@ public enum HotkeyResolver {
         return index == 9 ? "0" : "\(index + 1)"
     }
 
-    public static func resolve(cheets: [Cheet], settings: HotkeySettings) -> HotkeyPlan {
+    public static func resolve(cheets: [Cheet], workspaces: [Workspace] = [], settings: HotkeySettings) -> HotkeyPlan {
         var plan = HotkeyPlan()
         var taken: Set<KeyCombo> = []
 
@@ -61,7 +65,13 @@ public enum HotkeyResolver {
 
         claim(settings.picker, for: .showPicker)
         claim(settings.toggleLast, for: .toggleLastCheet)
+        claim(settings.tile, for: .tileWindows)
+        claim(settings.stash, for: .stashWindows)
         claim(settings.ghostMode, for: .toggleGhostMode)
+
+        for workspace in workspaces {
+            claim(workspace.hotkey, for: .recallWorkspace(workspace.id))
+        }
 
         for cheet in cheets where cheet.hotkey.mode == .custom {
             claim(cheet.hotkey.combo, for: .showCheet(cheet.id))
@@ -69,6 +79,13 @@ public enum HotkeyResolver {
         if settings.autoNumbering {
             for (index, cheet) in cheets.enumerated() where cheet.hotkey.mode == .automatic {
                 claim(automaticCombo(forIndex: index, base: settings.baseModifiers), for: .showCheet(cheet.id), automatic: true)
+            }
+        }
+        // Lowest priority: ⇧ variants of every cheet combo that won, for "open alongside".
+        if settings.shiftForAlongside {
+            for cheet in cheets {
+                guard let combo = plan.cheetCombos[cheet.id], !combo.modifiers.contains(.shift) else { continue }
+                claim(KeyCombo(keyCode: combo.keyCode, modifiers: combo.modifiers.union(.shift)), for: .showCheetAlongside(cheet.id))
             }
         }
         return plan

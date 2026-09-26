@@ -69,19 +69,34 @@ final class StatusMenuController: NSObject, NSMenuDelegate {
                 item.keyEquivalent = equivalent.key
                 item.keyEquivalentModifierMask = equivalent.modifiers
             }
-            item.state = overlay.isVisible && overlay.state.cheetID == cheet.id ? .on : .off
+            item.state = overlay.isShowing(cheet.id) ? .on : .off
             item.toolTip = "\(cheet.sections.count) sections · \(cheet.entryCount) entries"
             return item
         }
 
+        func addCheetItems(index: Int, cheet: Cheet, to menu: NSMenu) {
+            let item = cheetItem(index: index, cheet: cheet)
+            menu.addItem(item)
+            // Holding ⇧ swaps in "Open … Alongside" (same key, plus ⇧). Not for a cheet that's already
+            // open, or whose combo already uses ⇧ (an alternate must differ only by modifiers).
+            guard !item.keyEquivalentModifierMask.contains(.shift), !overlay.isShowing(cheet.id) else { return }
+            let alternate = ActionMenuItem("Open \(cheet.title) Alongside", modifiers: []) { [weak controller] in
+                controller?.overlay.show(cheetID: cheet.id, alongside: true)
+            }
+            alternate.keyEquivalent = item.keyEquivalent
+            alternate.keyEquivalentModifierMask = item.keyEquivalentModifierMask.union(.shift)
+            alternate.isAlternate = true
+            menu.addItem(alternate)
+        }
+
         for (index, cheet) in model.cheets.enumerated().prefix(inlineLimit) {
-            menu.addItem(cheetItem(index: index, cheet: cheet))
+            addCheetItems(index: index, cheet: cheet, to: menu)
         }
         if model.cheets.count > inlineLimit {
             let more = NSMenuItem(title: "More Cheets (\(model.cheets.count - inlineLimit))", action: nil, keyEquivalent: "")
             let submenu = NSMenu()
             for (index, cheet) in model.cheets.enumerated().dropFirst(inlineLimit) {
-                submenu.addItem(cheetItem(index: index, cheet: cheet))
+                addCheetItems(index: index, cheet: cheet, to: submenu)
             }
             more.submenu = submenu
             menu.addItem(more)
@@ -98,13 +113,46 @@ final class StatusMenuController: NSObject, NSMenuDelegate {
         menu.addItem(last)
 
         if overlay.isVisible {
-            menu.addItem(ActionMenuItem("Hide Overlay", modifiers: []) { [weak controller] in controller?.overlay.hide() })
+            menu.addItem(ActionMenuItem("Hide Cheet Windows", modifiers: []) { [weak controller] in controller?.overlay.hide() })
         }
 
         let ghost = ActionMenuItem("Ghost Mode (Click-Through)", modifiers: []) { [weak controller] in controller?.toggleGhostMode() }
         ghost.state = model.settings.behavior.ghostMode ? .on : .off
         apply(model.hotkeyPlan.combo(for: .toggleGhostMode), to: ghost)
         menu.addItem(ghost)
+
+        let tile = ActionMenuItem("Tile Cheet Windows", modifiers: []) { [weak controller] in controller?.overlay.tile() }
+        tile.isEnabled = overlay.windows.count > 1
+        apply(model.hotkeyPlan.combo(for: .tileWindows), to: tile)
+        menu.addItem(tile)
+
+        let stash = ActionMenuItem(overlay.isStashed ? "Bring Back Cheet Windows" : "Stash Cheet Windows", modifiers: []) { [weak controller] in
+            controller?.overlay.toggleStash()
+        }
+        stash.isEnabled = overlay.isVisible
+        apply(model.hotkeyPlan.combo(for: .stashWindows), to: stash)
+        menu.addItem(stash)
+
+        let workspacesItem = NSMenuItem(title: "Workspaces", action: nil, keyEquivalent: "")
+        let workspacesMenu = NSMenu()
+        for workspace in model.workspaces {
+            let item = ActionMenuItem(workspace.name, modifiers: []) { [weak controller] in controller?.overlay.recall(workspaceID: workspace.id) }
+            apply(model.hotkeyPlan.combo(for: .recallWorkspace(workspace.id)), to: item)
+            item.state = overlay.currentWorkspaceID == workspace.id ? .on : .off
+            workspacesMenu.addItem(item)
+        }
+        if !model.workspaces.isEmpty { workspacesMenu.addItem(.separator()) }
+        let save = ActionMenuItem("Save Workspace…", modifiers: []) { [weak controller] in controller?.overlay.promptSaveWorkspace() }
+        save.isEnabled = overlay.isVisible
+        workspacesMenu.addItem(save)
+        if let current = overlay.currentWorkspace {
+            let update = ActionMenuItem("Update “\(current.name)”", modifiers: []) { [weak controller] in controller?.overlay.updateCurrentWorkspace() }
+            update.isEnabled = overlay.isVisible
+            workspacesMenu.addItem(update)
+        }
+        workspacesMenu.addItem(ActionMenuItem("Manage Workspaces…", modifiers: []) { [weak controller] in controller?.openSettings(.workspaces) })
+        workspacesItem.submenu = workspacesMenu
+        menu.addItem(workspacesItem)
 
         menu.addItem(.separator())
         menu.addItem(ActionMenuItem("New Cheet…", key: "n") { [weak controller] in controller?.openImporter() })

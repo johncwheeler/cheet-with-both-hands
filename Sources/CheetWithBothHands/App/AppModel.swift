@@ -14,6 +14,13 @@ final class AppModel {
         }
     }
 
+    var workspaces: [Workspace] = [] {
+        didSet {
+            scheduleSave(.cheets) // workspaces live in library.json with the cheets
+            recomputeHotkeys()
+        }
+    }
+
     var settings: AppSettings {
         didSet {
             guard settings != oldValue else { return }
@@ -46,21 +53,22 @@ final class AppModel {
         settings = store.loadSettings()
         viewState = store.loadViewState()
 
-        var loaded: [Cheet]? = nil
+        var loaded: Library? = nil
         do {
-            loaded = try store.loadCheets()
+            loaded = try store.loadLibrary()
         } catch {
             NSLog("Cheet with Both Hands: failed to read library: \(error)")
         }
         if let loaded {
-            cheets = loaded
+            cheets = loaded.cheets
+            workspaces = loaded.workspaces
         } else {
             cheets = SampleCheets.all()
             isFirstLaunch = !viewState.hasLaunchedBefore
             pendingSaves.insert(.cheets)
         }
         viewState.hasLaunchedBefore = true
-        hotkeyPlan = HotkeyResolver.resolve(cheets: cheets, settings: settings.hotkeys)
+        hotkeyPlan = HotkeyResolver.resolve(cheets: cheets, workspaces: workspaces, settings: settings.hotkeys)
         scheduleSave(.viewState)
     }
 
@@ -71,7 +79,7 @@ final class AppModel {
     }
 
     private func recomputeHotkeys() {
-        let plan = HotkeyResolver.resolve(cheets: cheets, settings: settings.hotkeys)
+        let plan = HotkeyResolver.resolve(cheets: cheets, workspaces: workspaces, settings: settings.hotkeys)
         guard plan != hotkeyPlan else { return }
         hotkeyPlan = plan
         onHotkeyPlanChanged?()
@@ -110,6 +118,10 @@ final class AppModel {
 
     func delete(_ id: UUID) {
         cheets.removeAll { $0.id == id }
+        let remaining = Set(cheets.map(\.id))
+        if workspaces.contains(where: { $0.windows.contains { $0.cheetID == id } }) {
+            workspaces = workspaces.map { $0.pruned(keeping: remaining) }
+        }
         viewState.cheets[id.uuidString] = nil
         if viewState.lastCheetID == id { viewState.lastCheetID = nil }
     }
@@ -185,7 +197,7 @@ final class AppModel {
         let kinds = pendingSaves
         pendingSaves.removeAll()
         do {
-            if kinds.contains(.cheets) { try store.saveCheets(cheets) }
+            if kinds.contains(.cheets) { try store.saveLibrary(Library(cheets: cheets, workspaces: workspaces)) }
             if kinds.contains(.settings) { try store.saveSettings(settings) }
             if kinds.contains(.viewState) { try store.saveViewState(viewState) }
         } catch {
