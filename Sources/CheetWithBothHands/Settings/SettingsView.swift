@@ -169,6 +169,7 @@ struct HotkeysPane: View {
                 LabeledContent("Toggle last cheet") { globalRecorder(hotkeys.toggleLast, action: .toggleLastCheet) }
                 LabeledContent("Ghost mode on / off") { globalRecorder(hotkeys.ghostMode, action: .toggleGhostMode) }
                 LabeledContent("Tile cheet windows") { globalRecorder(hotkeys.tile, action: .tileWindows) }
+                LabeledContent("Stash cheet windows") { globalRecorder(hotkeys.stash, action: .stashWindows) }
             }
 
             Section("Per-cheet shortcuts") {
@@ -288,6 +289,7 @@ struct HotkeyStatusBadge: View {
         case .toggleLastCheet: return "toggle last cheet"
         case .toggleGhostMode: return "ghost mode"
         case .tileWindows: return "tile cheet windows"
+        case .stashWindows: return "stash cheet windows"
         case .showCheetAlongside(let id): return "“\(model.cheet(id: id)?.title ?? "a cheet")” (alongside)"
         }
     }

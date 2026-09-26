@@ -20,6 +20,8 @@ final class OverlayState {
     var focusSearchRequest = 0
     var isVisible = false
     var showControls = false
+    /// The window is stashed at a screen edge.
+    var isStashed = false
 }
 
 struct OverlayRootView: View {
@@ -75,6 +77,12 @@ struct OverlayRootView: View {
             }
             .frame(width: 18, height: 18)
             .padding(4)
+        }
+        .overlay {
+            // A stashed window is a sliver at the screen edge: any click brings every window back.
+            if state.isStashed {
+                Color.clear.contentShape(Rectangle()).onTapGesture { controller.manager.toggleStash() }
+            }
         }
         .foregroundStyle(appearance.textColor?.color ?? Color.primary)
         .background(GlassBackground(appearance: appearance))

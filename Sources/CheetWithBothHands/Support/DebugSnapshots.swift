@@ -98,6 +98,17 @@ enum DebugSnapshots {
                     }
                     print("tiled: \(frames())")
                     for (index, window) in overlay.windows.enumerated() { shot(window.window, "tiled-\(index + 1)") }
+                    overlay.toggleStash()
+                    await pause(0.5)
+                    let visible = overlay.windows.map { w -> String in
+                        let screen = w.window.screen?.visibleFrame ?? .zero
+                        let inside = w.window.frame.intersection(screen)
+                        return "\(Int(inside.width))×\(Int(inside.height))"
+                    }
+                    print("stashed: visible slivers \(visible)")
+                    overlay.toggleStash()
+                    await pause(0.5)
+                    print("unstashed: \(frames())")
                     overlay.hide()
                     await pause(0.3)
                 }

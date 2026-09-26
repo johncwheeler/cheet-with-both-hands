@@ -108,6 +108,8 @@ final class AppController {
             toggleGhostMode()
         case .tileWindows:
             overlay.tile()
+        case .stashWindows:
+            overlay.toggleStash()
         }
     }
 

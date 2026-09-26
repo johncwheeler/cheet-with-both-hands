@@ -133,6 +133,11 @@ struct HotkeyResolverTests {
         #expect(plan.combo(for: .tileWindows) == settings.tile)
         #expect(plan.conflicts[.showCheet(list[0].id)] != nil)
     }
+
+    @Test func stashDefaultsToControlOptionCommandH() {
+        let plan = HotkeyResolver.resolve(cheets: [], settings: HotkeySettings())
+        #expect(plan.combo(for: .stashWindows) == KeyCombo(keyCode: KeyCodes.h, modifiers: [.control, .option, .command]))
+    }
 }
 
 struct SearchTests {

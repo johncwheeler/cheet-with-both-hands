@@ -33,6 +33,7 @@ final class CheetWindowManager {
     /// or opens alongside. A cheet that's already open just comes forward.
     func show(cheetID: UUID, alongside: Bool = false, focus: Bool? = nil) {
         guard model.cheet(id: cheetID) != nil else { return }
+        if isStashed { unstash() }
         hiddenSet = []
         if let existing = window(showing: cheetID) {
             existing.focus(focus ?? model.settings.behavior.takeFocus)
@@ -65,6 +66,7 @@ final class CheetWindowManager {
     }
 
     func toggleLast() {
+        if isStashed { unstash(); return }
         if isVisible { hide(); return }
         let set = hiddenSet.filter { $0.cheetID.map { model.cheet(id: $0) != nil } ?? true }
         hiddenSet = []
@@ -134,6 +136,11 @@ final class CheetWindowManager {
 
     func hotkeyPressed(cheetID: UUID, alongside: Bool) {
         guard pendingPress?.cheetID != cheetID, model.cheet(id: cheetID) != nil else { return } // ignore key repeat
+        if isStashed, let existing = window(showing: cheetID) {
+            unstash() // its window is a sliver: bring everything back rather than closing it
+            existing.focus(model.settings.behavior.takeFocus)
+            return
+        }
         hiddenSet = []
         let situation: PressDecision.Situation = isShowing(cheetID) ? .cheetVisible : (windows.isEmpty ? .noWindows : .othersVisible)
         let action = PressDecision.onPress(situation, alongside: alongside)
@@ -157,6 +164,8 @@ final class CheetWindowManager {
         let behavior = model.settings.behavior
         let release = PressDecision.onRelease(after: press.action, trigger: behavior.trigger,
                                               heldFor: Date().timeIntervalSince(press.time), holdThreshold: behavior.holdThreshold)
+        // A tap or an alongside press brings the stash back; a peek leaves it alone.
+        if isStashed, press.action != .close, release != .closeOpened { unstash() }
         switch release {
         case .nothing: break
         case .closeOpened: press.opened?.close()
@@ -172,9 +181,45 @@ final class CheetWindowManager {
         let margin = CGFloat(model.settings.layout.margin)
         let container = screen.visibleFrame.insetBy(dx: margin, dy: margin)
         let frames = TileLayout.tile(windows.map(\.frame), in: container, gap: 12, minWidth: OverlayPanel.minimumSize.width)
+        if isStashed { unstash() } // frames above come from the home frames
         for (window, frame) in zip(windows, frames) {
             window.setFrame(frame, animate: true, remember: true)
         }
+    }
+
+    // MARK: Stashing
+
+    private(set) var isStashed = false
+
+    func toggleStash() { isStashed ? unstash() : stash() }
+
+    /// Slides every window to the nearest free screen edge, leaving a 20pt sliver.
+    func stash() {
+        guard !windows.isEmpty, !isStashed else { return }
+        isStashed = true
+        pendingPress = nil
+        for window in windows {
+            guard let screen = window.window.screen ?? NSScreen.main else { continue }
+            let others = NSScreen.screens.filter { $0 !== screen }.map(\.frame)
+            let target = StashGeometry.stash(window.frame, visibleFrame: screen.visibleFrame, screenFrame: screen.frame,
+                                             otherScreens: others, sliver: 20)
+            window.stash(to: target.frame)
+        }
+    }
+
+    /// Brings every stashed window back to where it was (onto a remaining screen if its display is gone).
+    func unstash() {
+        guard isStashed else { return }
+        isStashed = false
+        let mouseScreen = NSScreen.screens.first { NSMouseInRect(NSEvent.mouseLocation, $0.frame, false) } ?? NSScreen.main
+        for window in windows {
+            guard let home = window.homeFrame else { continue }
+            let stillOnAScreen = NSScreen.screens.contains { $0.frame.intersects(home) }
+            let target = stillOnAScreen || mouseScreen == nil ? home
+                : home.clamped(to: mouseScreen!.visibleFrame, minSize: OverlayPanel.minimumSize)
+            window.unstash(to: target)
+        }
+        activeWindow?.focus(model.settings.behavior.takeFocus)
     }
 
     // MARK: Window callbacks
@@ -190,6 +235,7 @@ final class CheetWindowManager {
             hiddenSet = [HiddenWindow(cheetID: window.cheetID, frame: window.frame, query: window.state.query)]
         }
         windows.removeAll { $0 === window }
+        if isStashed, !windows.contains(where: \.isStashed) { isStashed = false }
         closing.append(window)
         if windows.isEmpty { pendingPress = nil }
         updateOutsideClickMonitor()

@@ -38,6 +38,11 @@ final class OverlayPanel: NSPanel {
     override var canBecomeKey: Bool { acceptsKey }
     override var canBecomeMain: Bool { false }
 
+    /// AppKit keeps windows below the menu bar; stashing slides one past the top edge on purpose.
+    override func constrainFrameRect(_ frameRect: NSRect, to screen: NSScreen?) -> NSRect {
+        acceptsKey ? super.constrainFrameRect(frameRect, to: screen) : frameRect
+    }
+
     override func cancelOperation(_ sender: Any?) {
         onCancel?()
     }
@@ -93,8 +98,29 @@ final class CheetWindowController: NSObject, NSWindowDelegate {
     // MARK: - Showing, switching and closing
 
     var cheetID: UUID? { state.cheetID }
-    /// The window's frame (Task 8 makes this its home frame while stashed).
-    var frame: NSRect { panel.frame }
+    /// Where the window sits when it isn't stashed.
+    private(set) var homeFrame: NSRect?
+    var isStashed: Bool { homeFrame != nil }
+    /// The window's frame, or its home frame while stashed (for tiling, workspaces and hide).
+    var frame: NSRect { homeFrame ?? panel.frame }
+
+    func stash(to stashed: NSRect) {
+        guard !isStashed else { return }
+        if editState.isEditing { endEditing() }
+        homeFrame = panel.frame
+        state.isStashed = true
+        panel.acceptsKey = false
+        if panel.isKeyWindow { panel.resignKey() }
+        setFrame(stashed, animate: true, remember: false)
+    }
+
+    func unstash(to home: NSRect) {
+        guard isStashed else { return }
+        homeFrame = nil
+        state.isStashed = false
+        panel.acceptsKey = true
+        setFrame(home, animate: true, remember: false)
+    }
 
     /// Loads a cheet into this window, resetting per-cheet state when it changes.
     private func load(_ cheetID: UUID?) {
@@ -316,7 +342,7 @@ final class CheetWindowController: NSObject, NSWindowDelegate {
     }
 
     private func scheduleFrameSave() {
-        guard userAdjustedFrame, !isAnimatingFrame, state.isVisible, model.settings.layout.rememberFrame else { return }
+        guard userAdjustedFrame, !isAnimatingFrame, !isStashed, state.isVisible, model.settings.layout.rememberFrame else { return }
         frameSaveTask?.cancel()
         frameSaveTask = Task { [weak self] in
             try? await Task.sleep(for: .milliseconds(300))
@@ -333,6 +359,7 @@ final class CheetWindowController: NSObject, NSWindowDelegate {
     }
 
     private func saveFrame() {
+        guard !isStashed else { return }
         frameSaveTask = nil
         guard userAdjustedFrame, model.settings.layout.rememberFrame, let screen = panel.screen else { return }
         userAdjustedFrame = false

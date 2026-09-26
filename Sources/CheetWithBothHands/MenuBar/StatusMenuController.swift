@@ -126,6 +126,13 @@ final class StatusMenuController: NSObject, NSMenuDelegate {
         apply(model.hotkeyPlan.combo(for: .tileWindows), to: tile)
         menu.addItem(tile)
 
+        let stash = ActionMenuItem(overlay.isStashed ? "Bring Back Cheet Windows" : "Stash Cheet Windows", modifiers: []) { [weak controller] in
+            controller?.overlay.toggleStash()
+        }
+        stash.isEnabled = overlay.isVisible
+        apply(model.hotkeyPlan.combo(for: .stashWindows), to: stash)
+        menu.addItem(stash)
+
         menu.addItem(.separator())
         menu.addItem(ActionMenuItem("New Cheet…", key: "n") { [weak controller] in controller?.openImporter() })
         menu.addItem(ActionMenuItem("New Cheet from Clipboard", modifiers: []) { [weak controller] in controller?.newCheetFromClipboard() })

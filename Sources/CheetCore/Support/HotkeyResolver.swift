@@ -6,6 +6,7 @@ public enum HotkeyAction: Hashable, Sendable {
     case toggleLastCheet
     case toggleGhostMode
     case tileWindows
+    case stashWindows
     case showCheetAlongside(UUID)
 }
 
@@ -64,6 +65,7 @@ public enum HotkeyResolver {
         claim(settings.picker, for: .showPicker)
         claim(settings.toggleLast, for: .toggleLastCheet)
         claim(settings.tile, for: .tileWindows)
+        claim(settings.stash, for: .stashWindows)
         claim(settings.ghostMode, for: .toggleGhostMode)
 
         for cheet in cheets where cheet.hotkey.mode == .custom {
