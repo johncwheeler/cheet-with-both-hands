@@ -69,7 +69,7 @@ final class StatusMenuController: NSObject, NSMenuDelegate {
                 item.keyEquivalent = equivalent.key
                 item.keyEquivalentModifierMask = equivalent.modifiers
             }
-            item.state = overlay.isVisible && overlay.state.cheetID == cheet.id ? .on : .off
+            item.state = overlay.isShowing(cheet.id) ? .on : .off
             item.toolTip = "\(cheet.sections.count) sections · \(cheet.entryCount) entries"
             return item
         }

@@ -8,7 +8,7 @@ final class AppController {
     static var shared: AppController!
 
     let model: AppModel
-    let overlay: OverlayController
+    let overlay: CheetWindowManager
     let picker: PickerController
     let windows: WindowManager
     private(set) var statusMenu: StatusMenuController!
@@ -25,7 +25,7 @@ final class AppController {
             store = LibraryStore()
         }
         model = AppModel(store: store)
-        overlay = OverlayController(model: model)
+        overlay = CheetWindowManager(model: model)
         picker = PickerController(model: model)
         windows = WindowManager(model: model)
     }
@@ -96,7 +96,7 @@ final class AppController {
         switch action {
         case .showCheet(let id):
             if picker.isVisible { picker.hide() }
-            overlay.hotkeyPressed(cheetID: id)
+            overlay.hotkeyPressed(cheetID: id, alongside: false)
         case .showPicker:
             picker.toggle()
         case .toggleLastCheet:

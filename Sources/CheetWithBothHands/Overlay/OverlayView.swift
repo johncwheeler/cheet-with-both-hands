@@ -25,7 +25,7 @@ final class OverlayState {
 struct OverlayRootView: View {
     let model: AppModel
     @Bindable var state: OverlayState
-    let controller: OverlayController
+    let controller: CheetWindowController
 
     @FocusState private var searchFocused: Bool
 
@@ -182,7 +182,7 @@ struct OverlayRootView: View {
                     }
                 HeaderButton(symbol: "square.grid.2x2", help: "Cheet picker (⌘P)") { controller.openPicker() }
                 HeaderButton(symbol: "gearshape", help: "Settings (⌘,)") { controller.openSettings() }
-                HeaderButton(symbol: "xmark", help: "Close (Esc)") { controller.hide() }
+                HeaderButton(symbol: "xmark", help: "Close (Esc)") { controller.close() }
             }
         }
         .padding(.horizontal, 12)
@@ -194,7 +194,7 @@ struct OverlayRootView: View {
         Menu {
             ForEach(Array(model.cheets.enumerated()), id: \.element.id) { index, item in
                 Button {
-                    controller.show(cheetID: item.id)
+                    controller.switchTo(cheetID: item.id)
                 } label: {
                     let combo = model.combo(forCheet: item.id)?.displayString
                     Text("\(index + 1).  \(item.title)" + (combo.map { "   \($0)" } ?? ""))

@@ -109,7 +109,7 @@ struct CheetsPane: View {
         alert.buttons.first?.hasDestructiveAction = true
         guard alert.runModal() == .alertFirstButtonReturn else { return }
         let index = model.index(of: id) ?? 0
-        if AppController.shared.overlay.state.cheetID == id { AppController.shared.overlay.hide() }
+        AppController.shared.overlay.closeWindow(showing: id)
         model.delete(id)
         if !model.cheets.isEmpty {
             navigation.selectedCheetID = model.cheets[min(index, model.cheets.count - 1)].id
