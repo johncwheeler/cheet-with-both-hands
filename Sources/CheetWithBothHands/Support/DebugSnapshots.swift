@@ -73,6 +73,25 @@ enum DebugSnapshots {
                 await press(KeyCodes.leftArrow, NSLeftArrowFunctionKey, .shift); steps.append("⇧← \(position())")
                 print("cheet stepping: " + steps.joined(separator: " → "))
                 print("outer scroller after switching: \(overlay.activeWindow!.outerScroller.map { String(describing: type(of: $0)) } ?? "none")")
+
+                // Several windows: alongside adds, a plain tap replaces, key repeat doesn't duplicate.
+                if controller.model.cheets.count >= 3 {
+                    let ids = controller.model.cheets.prefix(3).map(\.id)
+                    overlay.hide()
+                    await pause(0.3)
+                    overlay.hotkeyPressed(cheetID: ids[0], alongside: false); overlay.hotkeyReleased(cheetID: ids[0])
+                    overlay.hotkeyPressed(cheetID: ids[1], alongside: true)
+                    overlay.hotkeyPressed(cheetID: ids[1], alongside: true) // auto-repeat
+                    overlay.hotkeyReleased(cheetID: ids[1])
+                    await pause(0.4)
+                    print("alongside: \(overlay.windows.count) windows")
+                    overlay.hotkeyPressed(cheetID: ids[2], alongside: false); overlay.hotkeyReleased(cheetID: ids[2])
+                    await pause(0.4)
+                    let open = overlay.windows.compactMap(\.cheetID).map { id in controller.model.index(of: id).map { $0 + 1 } ?? 0 }
+                    print("replace: \(overlay.windows.count) windows showing cheets \(open)")
+                    overlay.hide()
+                    await pause(0.3)
+                }
                 overlay.hide()
                 await pause(0.3)
             }

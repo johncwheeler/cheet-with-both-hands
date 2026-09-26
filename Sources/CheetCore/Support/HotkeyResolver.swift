@@ -5,6 +5,7 @@ public enum HotkeyAction: Hashable, Sendable {
     case showPicker
     case toggleLastCheet
     case toggleGhostMode
+    case showCheetAlongside(UUID)
 }
 
 public struct HotkeyBinding: Hashable, Sendable {
@@ -69,6 +70,13 @@ public enum HotkeyResolver {
         if settings.autoNumbering {
             for (index, cheet) in cheets.enumerated() where cheet.hotkey.mode == .automatic {
                 claim(automaticCombo(forIndex: index, base: settings.baseModifiers), for: .showCheet(cheet.id), automatic: true)
+            }
+        }
+        // Lowest priority: ⇧ variants of every cheet combo that won, for "open alongside".
+        if settings.shiftForAlongside {
+            for cheet in cheets {
+                guard let combo = plan.cheetCombos[cheet.id], !combo.modifiers.contains(.shift) else { continue }
+                claim(KeyCombo(keyCode: combo.keyCode, modifiers: combo.modifiers.union(.shift)), for: .showCheetAlongside(cheet.id))
             }
         }
         return plan

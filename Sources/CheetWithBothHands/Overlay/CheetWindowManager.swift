@@ -12,9 +12,6 @@ final class CheetWindowManager {
     private var closing: [CheetWindowController] = []
     private var outsideClickMonitor: Any?
 
-    // Single-window hotkey state, as in the old OverlayController (replaced in the next change).
-    private var activePress: (cheetID: UUID, time: Date, hidOnPress: Bool)?
-
     init(model: AppModel) {
         self.model = model
         model.addSettingsObserver { [weak self] old, new in
@@ -32,31 +29,66 @@ final class CheetWindowManager {
 
     // MARK: Showing
 
+    /// A cheet shown from the picker, menus, Settings or a URL: replaces the active window's cheet,
+    /// or opens alongside. A cheet that's already open just comes forward.
     func show(cheetID: UUID, alongside: Bool = false, focus: Bool? = nil) {
         guard model.cheet(id: cheetID) != nil else { return }
-        if let active = activeWindow {
-            active.switchTo(cheetID: cheetID)
-            active.focus(focus ?? model.settings.behavior.takeFocus)
-        } else {
-            open(cheetID, at: presetFrame(for: cheetID), focus: focus)
+        hiddenSet = []
+        if let existing = window(showing: cheetID) {
+            existing.focus(focus ?? model.settings.behavior.takeFocus)
+            windowDidBecomeActive(existing)
+        } else if alongside || windows.isEmpty {
+            open(cheetID, at: newWindowFrame(for: cheetID), focus: focus)
+        } else if let active = activeWindow {
+            open(cheetID, at: active.frame, focus: focus)
+            active.close() // cross-fades under the new window
         }
     }
 
     func toggle(cheetID: UUID) {
-        if isShowing(cheetID) { hide() } else { show(cheetID: cheetID) }
+        if let existing = window(showing: cheetID) { existing.close() } else { show(cheetID: cheetID) }
     }
 
+    /// A window closed by "hide all", remembered for toggle last.
+    private struct HiddenWindow { var cheetID: UUID?; var frame: NSRect; var query: String }
+    /// The set toggle last brings back: the last hide-all, or the last window closed on its own.
+    private var hiddenSet: [HiddenWindow] = []
+    private var isHidingAll = false
+
+    /// Closes every cheet window, remembering them for toggle last.
     func hide() {
+        guard !windows.isEmpty else { return }
+        hiddenSet = windows.map { HiddenWindow(cheetID: $0.cheetID, frame: $0.frame, query: $0.state.query) }
+        isHidingAll = true
         for window in windows { window.close() }
+        isHidingAll = false
     }
 
     func toggleLast() {
         if isVisible { hide(); return }
-        if let id = model.cheet(id: model.viewState.lastCheetID)?.id ?? model.cheets.first?.id {
+        let set = hiddenSet.filter { $0.cheetID.map { model.cheet(id: $0) != nil } ?? true }
+        hiddenSet = []
+        if !set.isEmpty {
+            for item in set {
+                open(item.cheetID, at: item.frame, focus: false).state.query = item.query
+            }
+            activeWindow?.focus(model.settings.behavior.takeFocus)
+        } else if let id = model.cheet(id: model.viewState.lastCheetID)?.id ?? model.cheets.first?.id {
             show(cheetID: id)
         } else {
-            open(nil, at: presetFrame(for: nil), focus: true)
+            open(nil, at: presetFrame(for: nil), focus: true) // the empty-library state
         }
+    }
+
+    /// Where a new window goes: the cheet's own remembered frame (per-cheet positions), the preset
+    /// frame when it's the only window, otherwise offset from the active window.
+    func newWindowFrame(for cheetID: UUID?) -> NSRect {
+        let layout = model.settings.layout
+        if layout.rememberFrame, layout.perCheetFrames, let id = cheetID, model.viewState[cheet: id].frame != nil {
+            return presetFrame(for: id)
+        }
+        guard let active = activeWindow, let screen = active.window.screen ?? NSScreen.main else { return presetFrame(for: cheetID) }
+        return active.frame.offsetBy(dx: 28, dy: -28).clamped(to: screen.visibleFrame, minSize: OverlayPanel.minimumSize)
     }
 
     func closeWindow(showing cheetID: UUID) { window(showing: cheetID)?.close() }
@@ -88,30 +120,47 @@ final class CheetWindowManager {
         return window
     }
 
-    // MARK: Hotkeys (today's single-window behavior)
+    // MARK: Hotkeys
+
+    /// A press waiting for its release to learn whether it was a tap or a hold.
+    private struct PendingPress {
+        var cheetID: UUID
+        var time: Date
+        var action: PressDecision.OnPress
+        weak var opened: CheetWindowController?
+        weak var replaced: CheetWindowController?
+    }
+    private var pendingPress: PendingPress?
 
     func hotkeyPressed(cheetID: UUID, alongside: Bool) {
-        guard activePress?.cheetID != cheetID else { return } // ignore key repeat
-        let sameCheetVisible = isShowing(cheetID)
-        switch model.settings.behavior.trigger {
-        case .toggle, .smart:
-            if sameCheetVisible { hide() } else { show(cheetID: cheetID) }
-            activePress = (cheetID, Date(), sameCheetVisible)
-        case .hold:
-            show(cheetID: cheetID, focus: false)
-            activePress = (cheetID, Date(), false)
+        guard pendingPress?.cheetID != cheetID, model.cheet(id: cheetID) != nil else { return } // ignore key repeat
+        hiddenSet = []
+        let situation: PressDecision.Situation = isShowing(cheetID) ? .cheetVisible : (windows.isEmpty ? .noWindows : .othersVisible)
+        let action = PressDecision.onPress(situation, alongside: alongside)
+        let focus = model.settings.behavior.trigger != .hold
+        var press = PendingPress(cheetID: cheetID, time: Date(), action: action)
+        switch action {
+        case .close:
+            window(showing: cheetID)?.close()
+        case .open:
+            press.opened = open(cheetID, at: newWindowFrame(for: cheetID), focus: focus)
+        case .openOver:
+            press.replaced = activeWindow
+            press.opened = open(cheetID, at: activeWindow?.frame ?? newWindowFrame(for: cheetID), focus: focus)
         }
+        pendingPress = press
     }
 
     func hotkeyReleased(cheetID: UUID) {
-        guard let press = activePress, press.cheetID == cheetID else { return }
-        activePress = nil
-        let held = Date().timeIntervalSince(press.time)
-        switch model.settings.behavior.trigger {
-        case .toggle: break
-        case .hold: if isShowing(cheetID) { hide() }
-        case .smart:
-            if !press.hidOnPress, held >= model.settings.behavior.holdThreshold, isShowing(cheetID) { hide() }
+        guard let press = pendingPress, press.cheetID == cheetID else { return }
+        pendingPress = nil
+        let behavior = model.settings.behavior
+        let release = PressDecision.onRelease(after: press.action, trigger: behavior.trigger,
+                                              heldFor: Date().timeIntervalSince(press.time), holdThreshold: behavior.holdThreshold)
+        switch release {
+        case .nothing: break
+        case .closeOpened: press.opened?.close()
+        case .closeReplaced: press.replaced?.close()
         }
     }
 
@@ -124,9 +173,12 @@ final class CheetWindowManager {
     }
 
     func windowWillClose(_ window: CheetWindowController) {
+        if !isHidingAll, windows.count == 1, windows.first === window {
+            hiddenSet = [HiddenWindow(cheetID: window.cheetID, frame: window.frame, query: window.state.query)]
+        }
         windows.removeAll { $0 === window }
         closing.append(window)
-        if windows.isEmpty { activePress = nil }
+        if windows.isEmpty { pendingPress = nil }
         updateOutsideClickMonitor()
     }
 

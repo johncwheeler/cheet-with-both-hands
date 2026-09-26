@@ -15,7 +15,7 @@ final class PickerState {
 final class PickerController: NSObject, NSWindowDelegate {
     let model: AppModel
     let state = PickerState()
-    var onChoose: ((UUID) -> Void)?
+    var onChoose: ((UUID, _ alongside: Bool) -> Void)?
 
     private let panel = OverlayPanel()
     private var keyMonitor: Any?
@@ -81,15 +81,15 @@ final class PickerController: NSObject, NSWindowDelegate {
         return scored.sorted { $0.0 > $1.0 || ($0.0 == $1.0 && $0.1.index < $1.1.index) }.map(\.1)
     }
 
-    func choose(_ id: UUID) {
+    func choose(_ id: UUID, alongside: Bool = false) {
         hide()
-        onChoose?(id)
+        onChoose?(id, alongside)
     }
 
-    func chooseSelection() {
+    func chooseSelection(alongside: Bool = false) {
         let list = results()
         guard list.indices.contains(state.selection) else { NSSound.beep(); return }
-        choose(list[state.selection].cheet.id)
+        choose(list[state.selection].cheet.id, alongside: alongside)
     }
 
     private func installMonitors() {
@@ -105,7 +105,7 @@ final class PickerController: NSObject, NSWindowDelegate {
             case KeyCodes.upArrow:
                 if count > 0 { self.state.selection = (self.state.selection - 1 + count) % count }
             case KeyCodes.returnKey, KeyCodes.keypadEnter:
-                self.chooseSelection()
+                self.chooseSelection(alongside: event.modifierFlags.contains(.shift))
             default:
                 return event
             }
@@ -178,7 +178,7 @@ struct PickerView: View {
                                 accent: appearance.accent.color
                             )
                             .id(item.cheet.id)
-                            .onTapGesture { controller.choose(item.cheet.id) }
+                            .onTapGesture { controller.choose(item.cheet.id, alongside: NSEvent.modifierFlags.contains(.shift)) }
                             .onHover { if $0 { state.selection = position } }
                         }
                         if results.isEmpty {
@@ -199,6 +199,7 @@ struct PickerView: View {
             Rectangle().fill(Color.primary.opacity(0.08)).frame(height: 0.5)
             HStack(spacing: 14) {
                 Label("open", systemImage: "return")
+                Label("alongside", systemImage: "shift")
                 Label("move", systemImage: "arrow.up.arrow.down")
                 Label("close", systemImage: "escape")
                 Spacer()

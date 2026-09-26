@@ -93,6 +93,37 @@ struct HotkeyResolverTests {
         #expect(HotkeyResolver.slotLabel(forIndex: 9) == "0")
         #expect(HotkeyResolver.slotLabel(forIndex: 10) == nil)
     }
+
+    @Test func shiftVariantsOpenCheetsAlongside() {
+        let list = cheets(2)
+        let plan = HotkeyResolver.resolve(cheets: list, settings: HotkeySettings())
+        let alongside = plan.combo(for: .showCheetAlongside(list[0].id))
+        #expect(alongside == KeyCombo(keyCode: KeyCodes.one, modifiers: [.control, .option, .command, .shift]))
+    }
+
+    @Test func noShiftVariantWhenTheComboAlreadyHasShift() {
+        var list = cheets(1)
+        list[0].hotkey = .custom(KeyCombo(keyCode: KeyCodes.k, modifiers: [.command, .shift]))
+        let plan = HotkeyResolver.resolve(cheets: list, settings: HotkeySettings())
+        #expect(plan.combo(for: .showCheetAlongside(list[0].id)) == nil)
+        #expect(plan.conflicts[.showCheetAlongside(list[0].id)] == nil)
+    }
+
+    @Test func shiftVariantsLoseToEverythingElse() {
+        var list = cheets(2)
+        // Cheet 2's custom combo is exactly cheet 1's Shift variant.
+        list[1].hotkey = .custom(KeyCombo(keyCode: KeyCodes.one, modifiers: [.control, .option, .command, .shift]))
+        let plan = HotkeyResolver.resolve(cheets: list, settings: HotkeySettings())
+        #expect(plan.cheetCombos[list[1].id]?.keyCode == KeyCodes.one)
+        #expect(plan.conflicts[.showCheetAlongside(list[0].id)] != nil)
+    }
+
+    @Test func shiftVariantsCanBeTurnedOff() {
+        var settings = HotkeySettings()
+        settings.shiftForAlongside = false
+        let list = cheets(1)
+        #expect(HotkeyResolver.resolve(cheets: list, settings: settings).combo(for: .showCheetAlongside(list[0].id)) == nil)
+    }
 }
 
 struct SearchTests {

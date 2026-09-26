@@ -74,14 +74,29 @@ final class StatusMenuController: NSObject, NSMenuDelegate {
             return item
         }
 
+        func addCheetItems(index: Int, cheet: Cheet, to menu: NSMenu) {
+            let item = cheetItem(index: index, cheet: cheet)
+            menu.addItem(item)
+            // Holding ⇧ swaps in "Open … Alongside" (same key, plus ⇧). Not for a cheet that's already
+            // open, or whose combo already uses ⇧ (an alternate must differ only by modifiers).
+            guard !item.keyEquivalentModifierMask.contains(.shift), !overlay.isShowing(cheet.id) else { return }
+            let alternate = ActionMenuItem("Open \(cheet.title) Alongside", modifiers: []) { [weak controller] in
+                controller?.overlay.show(cheetID: cheet.id, alongside: true)
+            }
+            alternate.keyEquivalent = item.keyEquivalent
+            alternate.keyEquivalentModifierMask = item.keyEquivalentModifierMask.union(.shift)
+            alternate.isAlternate = true
+            menu.addItem(alternate)
+        }
+
         for (index, cheet) in model.cheets.enumerated().prefix(inlineLimit) {
-            menu.addItem(cheetItem(index: index, cheet: cheet))
+            addCheetItems(index: index, cheet: cheet, to: menu)
         }
         if model.cheets.count > inlineLimit {
             let more = NSMenuItem(title: "More Cheets (\(model.cheets.count - inlineLimit))", action: nil, keyEquivalent: "")
             let submenu = NSMenu()
             for (index, cheet) in model.cheets.enumerated().dropFirst(inlineLimit) {
-                submenu.addItem(cheetItem(index: index, cheet: cheet))
+                addCheetItems(index: index, cheet: cheet, to: submenu)
             }
             more.submenu = submenu
             menu.addItem(more)
@@ -98,7 +113,7 @@ final class StatusMenuController: NSObject, NSMenuDelegate {
         menu.addItem(last)
 
         if overlay.isVisible {
-            menu.addItem(ActionMenuItem("Hide Overlay", modifiers: []) { [weak controller] in controller?.overlay.hide() })
+            menu.addItem(ActionMenuItem("Hide Cheet Windows", modifiers: []) { [weak controller] in controller?.overlay.hide() })
         }
 
         let ghost = ActionMenuItem("Ghost Mode (Click-Through)", modifiers: []) { [weak controller] in controller?.toggleGhostMode() }

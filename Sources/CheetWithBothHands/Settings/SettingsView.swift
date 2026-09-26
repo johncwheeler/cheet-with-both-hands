@@ -158,6 +158,12 @@ struct HotkeysPane: View {
                     .font(.caption).foregroundStyle(.secondary)
             }
 
+            Section("Opening alongside") {
+                Toggle("Add ⇧ to a cheet's shortcut to open it alongside the cheets already showing", isOn: hotkeys.shiftForAlongside)
+                Text("Without ⇧, a cheet's shortcut replaces the cheet in the active window. In the picker, ⇧↩ opens alongside.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+
             Section("Global actions") {
                 LabeledContent("Cheet picker") { globalRecorder(hotkeys.picker, action: .showPicker) }
                 LabeledContent("Toggle last cheet") { globalRecorder(hotkeys.toggleLast, action: .toggleLastCheet) }
@@ -227,6 +233,12 @@ struct CheetHotkeyEditor: View {
             }
             Spacer(minLength: 4)
             HotkeyStatusBadge(model: model, action: .showCheet(cheet.id), requested: cheet.hotkey.mode == .custom ? cheet.hotkey.combo : nil)
+            if model.settings.hotkeys.shiftForAlongside {
+                if let alongside = model.hotkeyPlan.combo(for: .showCheetAlongside(cheet.id)) {
+                    Text(alongside.displayString).font(.caption).foregroundStyle(.tertiary).help("Opens alongside")
+                }
+                HotkeyStatusBadge(model: model, action: .showCheetAlongside(cheet.id), requested: nil)
+            }
         }
     }
 
@@ -274,6 +286,7 @@ struct HotkeyStatusBadge: View {
         case .showPicker: return "the cheet picker"
         case .toggleLastCheet: return "toggle last cheet"
         case .toggleGhostMode: return "ghost mode"
+        case .showCheetAlongside(let id): return "“\(model.cheet(id: id)?.title ?? "a cheet")” (alongside)"
         }
     }
 }

@@ -31,7 +31,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 }
 
-/// `cheetwithbothhands://show/2`, `…/toggle/git`, `…/picker`, `…/hide`, `…/import`, `…/settings`,
+/// `cheetwithbothhands://show/2` (`?alongside=1` opens it alongside), `…/toggle/git`, `…/picker`, `…/hide`, `…/import`, `…/settings`,
 /// `…/import-url?url=…`, `…/browse?q=…`.
 enum URLCommands {
     @MainActor
@@ -44,7 +44,9 @@ enum URLCommands {
 
         switch command {
         case "show", "open":
-            if let target { controller.overlay.show(cheetID: target.id) } else { controller.overlay.toggleLast() }
+            let alongside = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems?
+                .contains { $0.name == "alongside" && $0.value != "0" } ?? false
+            if let target { controller.overlay.show(cheetID: target.id, alongside: alongside) } else { controller.overlay.toggleLast() }
         case "toggle":
             if let target { controller.overlay.toggle(cheetID: target.id) } else { controller.overlay.toggleLast() }
         case "hide":

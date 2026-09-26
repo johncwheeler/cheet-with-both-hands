@@ -52,7 +52,7 @@ final class AppController {
         ImageStore.shared.prune(keeping: model.cheets)
         ImageStore.shared.prefetch(model.cheets)
         statusMenu = StatusMenuController(controller: self)
-        picker.onChoose = { [weak self] id in self?.overlay.show(cheetID: id) }
+        picker.onChoose = { [weak self] id, alongside in self?.overlay.show(cheetID: id, alongside: alongside) }
 
         let hotkeys = HotkeyCenter.shared
         hotkeys.install()
@@ -97,6 +97,9 @@ final class AppController {
         case .showCheet(let id):
             if picker.isVisible { picker.hide() }
             overlay.hotkeyPressed(cheetID: id, alongside: false)
+        case .showCheetAlongside(let id):
+            if picker.isVisible { picker.hide() }
+            overlay.hotkeyPressed(cheetID: id, alongside: true)
         case .showPicker:
             picker.toggle()
         case .toggleLastCheet:
@@ -107,7 +110,10 @@ final class AppController {
     }
 
     private func handleRelease(_ action: HotkeyAction) {
-        if case .showCheet(let id) = action { overlay.hotkeyReleased(cheetID: id) }
+        switch action {
+        case .showCheet(let id), .showCheetAlongside(let id): overlay.hotkeyReleased(cheetID: id)
+        default: break
+        }
     }
 
     // MARK: - Commands
