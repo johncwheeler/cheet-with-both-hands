@@ -3,6 +3,7 @@
 #   scripts/build-app.sh            # release build for this Mac's architecture
 #   UNIVERSAL=1 scripts/build-app.sh  # arm64 + x86_64
 #   CONFIG=debug scripts/build-app.sh
+#   VERSION=1.2.0 BUILD_NUMBER=42 scripts/build-app.sh  # stamp the bundle version (CI release builds)
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
@@ -13,20 +14,40 @@ EXECUTABLE="CheetWithBothHands"
 BUILD_DIR="$ROOT/build"
 APP="$BUILD_DIR/$APP_NAME.app"
 
-ARCH_FLAGS=()
+# Universal builds compile each architecture separately and merge them with lipo, which (unlike
+# `swift build --arch arm64 --arch x86_64`) doesn't need Xcode's xcbuild.
+ARCHS=()
 if [[ "${UNIVERSAL:-0}" == "1" ]]; then
-  ARCH_FLAGS=(--arch arm64 --arch x86_64)
+  ARCHS=(arm64 x86_64)
 fi
 
-echo "▸ Compiling ($CONFIG)…"
-swift build -c "$CONFIG" "${ARCH_FLAGS[@]+"${ARCH_FLAGS[@]}"}" --product "$EXECUTABLE"
-BIN_DIR="$(swift build -c "$CONFIG" "${ARCH_FLAGS[@]+"${ARCH_FLAGS[@]}"}" --show-bin-path)"
+BINARY="$BUILD_DIR/$EXECUTABLE"
+mkdir -p "$BUILD_DIR"
+if [[ ${#ARCHS[@]} -eq 0 ]]; then
+  echo "▸ Compiling ($CONFIG)…"
+  swift build -c "$CONFIG" --product "$EXECUTABLE"
+  cp "$(swift build -c "$CONFIG" --show-bin-path)/$EXECUTABLE" "$BINARY"
+else
+  SLICES=()
+  for arch in "${ARCHS[@]}"; do
+    echo "▸ Compiling ($CONFIG, $arch)…"
+    swift build -c "$CONFIG" --arch "$arch" --product "$EXECUTABLE"
+    SLICES+=("$(swift build -c "$CONFIG" --arch "$arch" --show-bin-path)/$EXECUTABLE")
+  done
+  lipo -create "${SLICES[@]}" -output "$BINARY"
+fi
 
 echo "▸ Assembling bundle…"
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
-cp "$BIN_DIR/$EXECUTABLE" "$APP/Contents/MacOS/$EXECUTABLE"
+mv "$BINARY" "$APP/Contents/MacOS/$EXECUTABLE"
 cp "$ROOT/Resources/Info.plist" "$APP/Contents/Info.plist"
+if [[ -n "${VERSION:-}" ]]; then
+  /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $VERSION" "$APP/Contents/Info.plist"
+fi
+if [[ -n "${BUILD_NUMBER:-}" ]]; then
+  /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD_NUMBER" "$APP/Contents/Info.plist"
+fi
 printf 'APPL????' > "$APP/Contents/PkgInfo"
 
 # render_icon <name> <style> [inputs…]: renders build/<name>.icns when it's missing or older than

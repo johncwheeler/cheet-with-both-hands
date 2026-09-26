@@ -10,8 +10,6 @@ A menu-bar app for macOS that pops up **cheets** (cheat sheets) on a hotkey. It 
 interactive overlay over whatever you're working in. Tap the combo to pin a cheet, or hold it to
 peek and let go to hide it.
 
-<<<<<<< Updated upstream
-=======
 ![A cheet in the overlay: cards of macOS shortcuts drawn as keycaps, grouped into System, Screenshots, Text editing, Windows and Finder](docs/images/overlay.png)
 
 ## A quick tour
@@ -44,7 +42,6 @@ git tag v1.1.0 && git push origin v1.1.0
 The app is ad-hoc signed, not notarized, so macOS blocks it the first time. Unzip it, move it to
 Applications, open it, then allow it under System Settings › Privacy & Security › **Open Anyway**.
 
->>>>>>> Stashed changes
 ## Build & run
 
 Requires macOS 14+ and a Swift 6 toolchain: Xcode 16+, or just the Command Line Tools. Tests use
@@ -55,9 +52,11 @@ make app        # builds "build/Cheet with Both Hands.app" (release, ad-hoc sign
 make run        # build + launch
 make install    # copy to /Applications
 make test       # parser / resolver / storage tests
+make dist       # universal (arm64 + x86_64) app, zipped to build/Cheet-with-Both-Hands.zip
 ```
 
-`UNIVERSAL=1 make app` builds an arm64 + x86_64 binary.
+`UNIVERSAL=1 make app` builds an arm64 + x86_64 binary. `VERSION=1.2.0 BUILD_NUMBER=42` stamps the
+bundle's version (CI does this for tags).
 
 ## Using it
 
