@@ -1,0 +1,68 @@
+Sources/CheetWithBothHands/App/AppDelegate.swift
+  s_10ba636896f44a::t_0cc42aff4a7d52 10
+Sources/CheetWithBothHands/Support/Mascot.swift
+  s_10ba636896f44a::t_60906ac97090ad 1-3,5-6,8-15,19,21-22,25-52
+  s_10ba636896f44a::t_70baa80bc46660 4,7,16-18,20,23-24
+Sources/CheetWithBothHands/Support/DebugSnapshots.swift
+  s_10ba636896f44a::t_08c20a1050438a 115
+  s_10ba636896f44a::t_aff8caf540fb22 116-121
+  s_10ba636896f44a::t_83718df0a2d06c 223-238
+Sources/CheetWithBothHands/Picker/PickerController.swift
+  s_10ba636896f44a::t_b07d99a15e6800 153-161
+Sources/CheetWithBothHands/App/SplashController.swift
+  s_10ba636896f44a::t_6f50a078ca1e83 1-17,21-114
+  s_10ba636896f44a::t_7a36741e1689e8 18-20
+scripts/build-app.sh
+  s_10ba636896f44a::t_18bfa869a1aeb6 32-37,40-44,46-53
+  s_10ba636896f44a::t_14bdc15b5b7f1a 39
+  s_10ba636896f44a::t_8eec2e80fcd13e 38,45
+Sources/CheetWithBothHands/MenuBar/StatusMenuController.swift
+  s_10ba636896f44a::t_f8b6466a16de22 34-35,44-49
+  s_10ba636896f44a::t_f02925e466ec3f 41-43
+  s_10ba636896f44a::t_9a26c18647c013 50-51
+Sources/CheetWithBothHands/App/AppController.swift
+  s_10ba636896f44a::t_f41a2a8b9cf763 33-49
+  s_10ba636896f44a::t_2c2d7a6396921f 15-16
+  s_10ba636896f44a::t_ad25893a995c19 64-67,76,78
+  s_10ba636896f44a::t_ae64bd18a3de1f 77,79-81
+README.md
+  s_10ba636896f44a::t_f2db1fc4be0b5a 59-63
+  s_10ba636896f44a::t_aa89d0545f1f1b 161-162
+scripts/make-icon.swift
+  s_10ba636896f44a::t_c10b0712dc768b 129-141,146
+  s_10ba636896f44a::t_fc703d42732284 2-5,8-10,13-45
+Sources/CheetWithBothHands/Settings/SettingsView.swift
+  s_10ba636896f44a::t_f3ac439eb7514b 61-71,73,75-76
+  s_10ba636896f44a::t_d0b4eb83c81a36 74
+  s_10ba636896f44a::t_b6eda4374a01e0 116
+  s_10ba636896f44a::t_dc532ea79f18f7 72
+Tests/CheetCoreTests/SupportTests.swift
+  s_10ba636896f44a::t_11c31585eccd32 149
+  s_10ba636896f44a::t_838958c7943e94 163,167-168,173
+  s_10ba636896f44a::t_946e710823b822 148
+  s_10ba636896f44a::t_91536f6be1ca8e 164-166,169-172,174-186
+scripts/make-cheeter-assets.swift
+  s_10ba636896f44a::t_99c8ef002f3b78 71-72,75-76
+  s_10ba636896f44a::t_4d5a0bc2ddb475 1-70,73-74,77-98,100-119
+  s_10ba636896f44a::t_5c472f678d9301 99
+Sources/CheetCore/Models/Settings.swift
+  s_10ba636896f44a::t_2eb93c44867403 17,19-20,25,31
+  s_10ba636896f44a::t_12d6b3d047272d 9,14-16,18,21-24,26-30,32-41
+  s_10ba636896f44a::t_63b887c78d14a2 42
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "a965271c1b0bbfa14e87b5bc46dbddfa03945fb7",
+  "prompts": {},
+  "sessions": {
+    "s_10ba636896f44a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a40fafc3-e2f1-4632-b17f-ff8b951289c2",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "John Wheeler <jcw.dev@etherealfringe.com>"
+    }
+  }
+}
