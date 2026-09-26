@@ -56,11 +56,23 @@ enum DebugSnapshots {
                 await press(KeyCodes.downArrow, NSDownArrowFunctionKey); log.append("↓ \(Int(overlay.scrollOffset))")
                 await press(KeyCodes.pageDown, NSPageDownFunctionKey); log.append("PgDn \(Int(overlay.scrollOffset))")
                 await press(KeyCodes.downArrow, NSDownArrowFunctionKey, .command); log.append("⌘↓ \(Int(overlay.scrollOffset))")
+                overlay.outerScroller?.enclosingScrollView?.flashScrollers() // overlay scrollers hide when idle
+                await pause(0.15)
                 shot(overlay.window, "overlay-scrolled-bottom")
                 await press(KeyCodes.upArrow, NSUpArrowFunctionKey, .option); log.append("⌥↑ \(Int(overlay.scrollOffset))")
                 await press(KeyCodes.upArrow, NSUpArrowFunctionKey); log.append("↑ \(Int(overlay.scrollOffset))")
                 await press(KeyCodes.upArrow, NSUpArrowFunctionKey, .command); log.append("⌘↑ \(Int(overlay.scrollOffset))")
                 print("keyboard scroll: " + log.joined(separator: " → "))
+                print("outer scroller: \(overlay.outerScroller.map { String(describing: type(of: $0)) } ?? "none")")
+
+                // ⇧→ / ⇧← step through the cheets.
+                @MainActor func position() -> String { controller.model.index(of: overlay.state.cheetID).map { "\($0 + 1)" } ?? "-" }
+                var steps = ["start \(position())"]
+                await press(KeyCodes.rightArrow, NSRightArrowFunctionKey, .shift); steps.append("⇧→ \(position())")
+                await press(KeyCodes.leftArrow, NSLeftArrowFunctionKey, .shift); steps.append("⇧← \(position())")
+                await press(KeyCodes.leftArrow, NSLeftArrowFunctionKey, .shift); steps.append("⇧← \(position())")
+                print("cheet stepping: " + steps.joined(separator: " → "))
+                print("outer scroller after switching: \(overlay.outerScroller.map { String(describing: type(of: $0)) } ?? "none")")
                 overlay.hide(animated: false)
                 await pause(0.3)
             }

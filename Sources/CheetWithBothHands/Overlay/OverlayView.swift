@@ -311,6 +311,7 @@ struct OverlayRootView: View {
                 }
                 // Hands the outer NSScrollView to the controller for keyboard scrolling.
                 .background(EnclosingScrollViewReader { controller.attachScrollView($0) })
+                .hairlineScroller()
             }
             .scrollIndicators(.automatic)
             .background {

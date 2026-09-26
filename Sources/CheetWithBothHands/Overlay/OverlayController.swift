@@ -538,6 +538,9 @@ final class OverlayController: NSObject, NSWindowDelegate {
         scrollView.reflectScrolledClipView(clip)
     }
 
+    /// The outer scroll view's vertical scroller (for diagnostics).
+    var outerScroller: NSScroller? { outerScrollView?.verticalScroller }
+
     /// Current scroll offset from the top (for tests/diagnostics).
     var scrollOffset: CGFloat {
         guard let scrollView = outerScrollView, let document = scrollView.documentView else { return 0 }
@@ -568,6 +571,13 @@ final class OverlayController: NSObject, NSWindowDelegate {
             if flags == .command, chars == "z" { undo(); return true }
             if flags == [.command, .shift], chars == "z" { redo(); return true }
             if flags == .command, keyCode == KeyCodes.returnKey { endEditing(); return true }
+        }
+        // ⇧← / ⇧→ step through the cheets. With filter text they select text instead, and they're
+        // left alone while editing the layout.
+        if flags == .shift, keyCode == KeyCodes.leftArrow || keyCode == KeyCodes.rightArrow,
+           !editState.isEditing, state.query.isEmpty {
+            step(keyCode == KeyCodes.leftArrow ? -1 : 1)
+            return true
         }
         guard flags.contains(.command) else { return false }
 

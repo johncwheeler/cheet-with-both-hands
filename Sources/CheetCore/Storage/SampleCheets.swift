@@ -29,7 +29,7 @@ public enum SampleCheets {
     | ⌘↑ / ⌘↓ | Jump to top / bottom |
     | ⌘F | Focus the filter field |
     | Esc | Clear the filter, then close |
-    | ⌘[ / ⌘] | Previous / next cheet |
+    | ⇧← / ⇧→ or ⌘[ / ⌘] | Previous / next cheet |
     | ⌘1 … ⌘9 | Jump to cheet by number |
     | ⌘+ / ⌘- / ⌘0 | Bigger / smaller / reset text |
     | ⌘P | Open the cheet picker |
