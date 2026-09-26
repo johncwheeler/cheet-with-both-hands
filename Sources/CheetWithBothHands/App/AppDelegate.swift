@@ -32,7 +32,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 }
 
 /// `cheetwithbothhands://show/2` (`?alongside=1` opens it alongside), `…/toggle/git`, `…/picker`, `…/hide`, `…/import`, `…/settings`,
-/// `…/import-url?url=…`, `…/browse?q=…`.
+/// `…/import-url?url=…`, `…/browse?q=…`, `…/workspace/<name or number>`.
 enum URLCommands {
     @MainActor
     static func handle(_ url: URL) {
@@ -66,6 +66,12 @@ enum URLCommands {
             controller.openSettings()
         case "ghost":
             controller.toggleGhostMode()
+        case "workspace":
+            let name = argument ?? ""
+            let workspaces = controller.model.workspaces
+            let match = Int(name).flatMap { workspaces.indices.contains($0 - 1) ? workspaces[$0 - 1] : nil }
+                ?? workspaces.first { $0.name.caseInsensitiveCompare(name) == .orderedSame }
+            if let match { controller.overlay.recall(workspaceID: match.id) } else { NSSound.beep() }
         default:
             NSSound.beep()
         }

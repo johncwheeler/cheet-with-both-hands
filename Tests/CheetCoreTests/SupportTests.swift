@@ -138,6 +138,19 @@ struct HotkeyResolverTests {
         let plan = HotkeyResolver.resolve(cheets: [], settings: HotkeySettings())
         #expect(plan.combo(for: .stashWindows) == KeyCombo(keyCode: KeyCodes.h, modifiers: [.control, .option, .command]))
     }
+
+    @Test func workspaceHotkeysBeatCheetsButNotGlobalActions() {
+        let list = cheets(1)
+        let base: ModifierSet = [.control, .option, .command]
+        let workspace = Workspace(name: "W", windows: [], hotkey: KeyCombo(keyCode: KeyCodes.one, modifiers: base))
+        let plan = HotkeyResolver.resolve(cheets: list, workspaces: [workspace], settings: HotkeySettings())
+        #expect(plan.combo(for: .recallWorkspace(workspace.id)) == workspace.hotkey)
+        #expect(plan.conflicts[.showCheet(list[0].id)] != nil)
+
+        let clash = Workspace(name: "Clash", windows: [], hotkey: KeyCombo(keyCode: KeyCodes.slash, modifiers: base))
+        let second = HotkeyResolver.resolve(cheets: [], workspaces: [clash], settings: HotkeySettings())
+        #expect(second.conflicts[.recallWorkspace(clash.id)] != nil) // the picker's ⌃⌥⌘/ wins
+    }
 }
 
 struct SearchTests {

@@ -109,6 +109,17 @@ enum DebugSnapshots {
                     overlay.toggleStash()
                     await pause(0.5)
                     print("unstashed: \(frames())")
+                    overlay.saveWorkspace(named: "Snapshot Test")
+                    let saved = frames()
+                    overlay.hide()
+                    await pause(0.4)
+                    if let id = controller.model.workspaces.first(where: { $0.name == "Snapshot Test" })?.id {
+                        overlay.recall(workspaceID: id)
+                        await pause(0.5)
+                        print("workspace: saved \(saved)")
+                        print("workspace: recalled \(frames())")
+                    }
+                    controller.model.workspaces.removeAll { $0.name == "Snapshot Test" } // keep scratch libraries clean
                     overlay.hide()
                     await pause(0.3)
                 }

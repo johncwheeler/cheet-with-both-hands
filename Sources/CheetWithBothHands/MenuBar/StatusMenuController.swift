@@ -133,6 +133,27 @@ final class StatusMenuController: NSObject, NSMenuDelegate {
         apply(model.hotkeyPlan.combo(for: .stashWindows), to: stash)
         menu.addItem(stash)
 
+        let workspacesItem = NSMenuItem(title: "Workspaces", action: nil, keyEquivalent: "")
+        let workspacesMenu = NSMenu()
+        for workspace in model.workspaces {
+            let item = ActionMenuItem(workspace.name, modifiers: []) { [weak controller] in controller?.overlay.recall(workspaceID: workspace.id) }
+            apply(model.hotkeyPlan.combo(for: .recallWorkspace(workspace.id)), to: item)
+            item.state = overlay.currentWorkspaceID == workspace.id ? .on : .off
+            workspacesMenu.addItem(item)
+        }
+        if !model.workspaces.isEmpty { workspacesMenu.addItem(.separator()) }
+        let save = ActionMenuItem("Save Workspace…", modifiers: []) { [weak controller] in controller?.overlay.promptSaveWorkspace() }
+        save.isEnabled = overlay.isVisible
+        workspacesMenu.addItem(save)
+        if let current = overlay.currentWorkspace {
+            let update = ActionMenuItem("Update “\(current.name)”", modifiers: []) { [weak controller] in controller?.overlay.updateCurrentWorkspace() }
+            update.isEnabled = overlay.isVisible
+            workspacesMenu.addItem(update)
+        }
+        workspacesMenu.addItem(ActionMenuItem("Manage Workspaces…", modifiers: []) { [weak controller] in controller?.openSettings(.cheets) })
+        workspacesItem.submenu = workspacesMenu
+        menu.addItem(workspacesItem)
+
         menu.addItem(.separator())
         menu.addItem(ActionMenuItem("New Cheet…", key: "n") { [weak controller] in controller?.openImporter() })
         menu.addItem(ActionMenuItem("New Cheet from Clipboard", modifiers: []) { [weak controller] in controller?.newCheetFromClipboard() })

@@ -211,6 +211,10 @@ struct OverlayRootView: View {
             Divider()
             Button("Edit Layout") { controller.beginEditing() }
             Button("Tile Cheet Windows") { controller.manager.tile() }
+            Button("Save Workspace…") { controller.manager.promptSaveWorkspace() }
+            if let workspace = controller.manager.currentWorkspace {
+                Button("Update “\(workspace.name)”") { controller.manager.updateCurrentWorkspace() }
+            }
             Button("Edit Content…") { if let id = cheet?.id { controller.editCheet(id) } }
             Button("New Cheet…") { controller.newCheet() }
         } label: {

@@ -110,6 +110,8 @@ final class AppController {
             overlay.tile()
         case .stashWindows:
             overlay.toggleStash()
+        case .recallWorkspace(let id):
+            overlay.recall(workspaceID: id)
         }
     }
 

@@ -222,6 +222,78 @@ final class CheetWindowManager {
         activeWindow?.focus(model.settings.behavior.takeFocus)
     }
 
+    // MARK: Workspaces
+
+    /// The workspace last saved or recalled, offered as "Update …" in the menus.
+    private(set) var currentWorkspaceID: UUID?
+
+    var currentWorkspace: Workspace? { model.workspaces.first { $0.id == currentWorkspaceID } }
+
+    /// The open windows as workspace entries (home frames while stashed), back to front.
+    func workspaceWindows() -> [WorkspaceWindow] {
+        windows.compactMap { window in
+            guard let id = window.cheetID, let screen = NSScreen.bestMatch(for: window.frame) else { return nil }
+            return WorkspaceWindow(cheetID: id, frame: NormalizedRect(rect: window.frame, in: screen.visibleFrame),
+                                   displayID: screen.displayUUID)
+        }
+    }
+
+    /// Saves the open windows as a workspace, replacing one with the same name (case-insensitive).
+    func saveWorkspace(named name: String) {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        let entries = workspaceWindows()
+        if let index = model.workspaces.firstIndex(where: { $0.name.caseInsensitiveCompare(trimmed) == .orderedSame }) {
+            model.workspaces[index].windows = entries
+            model.workspaces[index].updatedAt = Date()
+            currentWorkspaceID = model.workspaces[index].id
+        } else {
+            let workspace = Workspace(name: trimmed, windows: entries)
+            model.workspaces.append(workspace)
+            currentWorkspaceID = workspace.id
+        }
+        showToast("Saved workspace “\(trimmed)”")
+    }
+
+    func updateCurrentWorkspace() {
+        guard let id = currentWorkspaceID, let index = model.workspaces.firstIndex(where: { $0.id == id }) else { return }
+        model.workspaces[index].windows = workspaceWindows()
+        model.workspaces[index].updatedAt = Date()
+        showToast("Updated “\(model.workspaces[index].name)”")
+    }
+
+    /// Replaces the open windows with the workspace's, focusing its active window.
+    func recall(workspaceID: UUID) {
+        guard let workspace = model.workspaces.first(where: { $0.id == workspaceID }) else { return }
+        let entries = workspace.windows.filter { model.cheet(id: $0.cheetID) != nil }
+        guard !entries.isEmpty else {
+            if isVisible { showToast("Nothing to recall in “\(workspace.name)”") } else { NSSound.beep() } // toasts need a window
+            return
+        }
+        if isStashed { unstash() }
+        hiddenSet = []
+        isHidingAll = true
+        for window in windows { window.close() }
+        isHidingAll = false
+        let screens = NSScreen.screens.map(\.info)
+        let fallback = screenForPresentation().info
+        for (position, entry) in entries.enumerated() {
+            let frame = entry.restoredFrame(on: screens, fallback: fallback, minSize: OverlayPanel.minimumSize)
+            open(entry.cheetID, at: frame, focus: position == entries.count - 1 ? nil : false)
+        }
+        currentWorkspaceID = workspace.id
+    }
+
+    /// Asks for a name, then saves the open windows as a workspace.
+    func promptSaveWorkspace() {
+        let titles = windows.compactMap { $0.cheetID.flatMap { model.cheet(id: $0)?.title } }
+        guard !titles.isEmpty else { NSSound.beep(); return }
+        AppController.shared.windows.showWorkspaceNaming(
+            suggestedName: currentWorkspace?.name ?? Workspace.suggestedName(for: titles),
+            existingNames: model.workspaces.map(\.name)
+        ) { [weak self] name in self?.saveWorkspace(named: name) }
+    }
+
     // MARK: Window callbacks
 
     func windowDidBecomeActive(_ window: CheetWindowController) {

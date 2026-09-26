@@ -7,6 +7,7 @@ public enum HotkeyAction: Hashable, Sendable {
     case toggleGhostMode
     case tileWindows
     case stashWindows
+    case recallWorkspace(UUID)
     case showCheetAlongside(UUID)
 }
 
@@ -47,7 +48,7 @@ public enum HotkeyResolver {
         return index == 9 ? "0" : "\(index + 1)"
     }
 
-    public static func resolve(cheets: [Cheet], settings: HotkeySettings) -> HotkeyPlan {
+    public static func resolve(cheets: [Cheet], workspaces: [Workspace] = [], settings: HotkeySettings) -> HotkeyPlan {
         var plan = HotkeyPlan()
         var taken: Set<KeyCombo> = []
 
@@ -67,6 +68,10 @@ public enum HotkeyResolver {
         claim(settings.tile, for: .tileWindows)
         claim(settings.stash, for: .stashWindows)
         claim(settings.ghostMode, for: .toggleGhostMode)
+
+        for workspace in workspaces {
+            claim(workspace.hotkey, for: .recallWorkspace(workspace.id))
+        }
 
         for cheet in cheets where cheet.hotkey.mode == .custom {
             claim(cheet.hotkey.combo, for: .showCheet(cheet.id))

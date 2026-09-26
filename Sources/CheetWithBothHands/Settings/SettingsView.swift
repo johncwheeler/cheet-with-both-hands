@@ -290,6 +290,7 @@ struct HotkeyStatusBadge: View {
         case .toggleGhostMode: return "ghost mode"
         case .tileWindows: return "tile cheet windows"
         case .stashWindows: return "stash cheet windows"
+        case .recallWorkspace(let id): return "workspace “\(model.workspaces.first { $0.id == id }?.name ?? "?")”"
         case .showCheetAlongside(let id): return "“\(model.cheet(id: id)?.title ?? "a cheet")” (alongside)"
         }
     }

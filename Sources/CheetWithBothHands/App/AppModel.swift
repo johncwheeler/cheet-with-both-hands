@@ -68,7 +68,7 @@ final class AppModel {
             pendingSaves.insert(.cheets)
         }
         viewState.hasLaunchedBefore = true
-        hotkeyPlan = HotkeyResolver.resolve(cheets: cheets, settings: settings.hotkeys)
+        hotkeyPlan = HotkeyResolver.resolve(cheets: cheets, workspaces: workspaces, settings: settings.hotkeys)
         scheduleSave(.viewState)
     }
 
@@ -79,7 +79,7 @@ final class AppModel {
     }
 
     private func recomputeHotkeys() {
-        let plan = HotkeyResolver.resolve(cheets: cheets, settings: settings.hotkeys)
+        let plan = HotkeyResolver.resolve(cheets: cheets, workspaces: workspaces, settings: settings.hotkeys)
         guard plan != hotkeyPlan else { return }
         hotkeyPlan = plan
         onHotkeyPlanChanged?()
