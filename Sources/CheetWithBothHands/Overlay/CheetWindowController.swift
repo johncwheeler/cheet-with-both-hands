@@ -490,6 +490,7 @@ final class CheetWindowController: NSObject, NSWindowDelegate {
         if flags == [.command, .option] {
             if keyCode == KeyCodes.leftArrow { step(-1); return true }
             if keyCode == KeyCodes.rightArrow { step(1); return true }
+            if keyCode == KeyCodes.t { manager.tile(); return true } // ⌥⌘T
             if keyCode == KeyCodes.e { // ⌥⌘E edits the content (matched by key code since ⌥ changes the character)
                 if let id = state.cheetID { editCheet(id) }
                 return true

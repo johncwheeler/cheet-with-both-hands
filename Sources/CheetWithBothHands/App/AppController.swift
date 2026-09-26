@@ -106,6 +106,8 @@ final class AppController {
             overlay.toggleLast()
         case .toggleGhostMode:
             toggleGhostMode()
+        case .tileWindows:
+            overlay.tile()
         }
     }
 

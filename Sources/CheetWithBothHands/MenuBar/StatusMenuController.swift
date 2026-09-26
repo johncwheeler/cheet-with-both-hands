@@ -121,6 +121,11 @@ final class StatusMenuController: NSObject, NSMenuDelegate {
         apply(model.hotkeyPlan.combo(for: .toggleGhostMode), to: ghost)
         menu.addItem(ghost)
 
+        let tile = ActionMenuItem("Tile Cheet Windows", modifiers: []) { [weak controller] in controller?.overlay.tile() }
+        tile.isEnabled = overlay.windows.count > 1
+        apply(model.hotkeyPlan.combo(for: .tileWindows), to: tile)
+        menu.addItem(tile)
+
         menu.addItem(.separator())
         menu.addItem(ActionMenuItem("New Cheet…", key: "n") { [weak controller] in controller?.openImporter() })
         menu.addItem(ActionMenuItem("New Cheet from Clipboard", modifiers: []) { [weak controller] in controller?.newCheetFromClipboard() })

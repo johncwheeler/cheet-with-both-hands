@@ -164,6 +164,19 @@ final class CheetWindowManager {
         }
     }
 
+    // MARK: Tiling
+
+    /// Tiles the visible windows onto the active window's screen, keeping their reading order.
+    func tile() {
+        guard let active = activeWindow, let screen = active.window.screen ?? NSScreen.main else { return }
+        let margin = CGFloat(model.settings.layout.margin)
+        let container = screen.visibleFrame.insetBy(dx: margin, dy: margin)
+        let frames = TileLayout.tile(windows.map(\.frame), in: container, gap: 12, minWidth: OverlayPanel.minimumSize.width)
+        for (window, frame) in zip(windows, frames) {
+            window.setFrame(frame, animate: true, remember: true)
+        }
+    }
+
     // MARK: Window callbacks
 
     func windowDidBecomeActive(_ window: CheetWindowController) {

@@ -89,6 +89,15 @@ enum DebugSnapshots {
                     await pause(0.4)
                     let open = overlay.windows.compactMap(\.cheetID).map { id in controller.model.index(of: id).map { $0 + 1 } ?? 0 }
                     print("replace: \(overlay.windows.count) windows showing cheets \(open)")
+                    overlay.show(cheetID: ids[1], alongside: true, focus: false)
+                    await pause(0.4)
+                    overlay.tile()
+                    await pause(0.5)
+                    @MainActor func frames() -> String {
+                        overlay.windows.map { w in "\(Int(w.frame.minX)),\(Int(w.frame.minY)) \(Int(w.frame.width))×\(Int(w.frame.height))" }.joined(separator: " | ")
+                    }
+                    print("tiled: \(frames())")
+                    for (index, window) in overlay.windows.enumerated() { shot(window.window, "tiled-\(index + 1)") }
                     overlay.hide()
                     await pause(0.3)
                 }

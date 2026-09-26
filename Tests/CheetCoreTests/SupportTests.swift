@@ -124,6 +124,15 @@ struct HotkeyResolverTests {
         let list = cheets(1)
         #expect(HotkeyResolver.resolve(cheets: list, settings: settings).combo(for: .showCheetAlongside(list[0].id)) == nil)
     }
+
+    @Test func tileAndStashAreGlobalActionsThatBeatCheets() {
+        var settings = HotkeySettings()
+        settings.tile = KeyCombo(keyCode: KeyCodes.one, modifiers: [.control, .option, .command])
+        let list = cheets(1)
+        let plan = HotkeyResolver.resolve(cheets: list, settings: settings)
+        #expect(plan.combo(for: .tileWindows) == settings.tile)
+        #expect(plan.conflicts[.showCheet(list[0].id)] != nil)
+    }
 }
 
 struct SearchTests {
