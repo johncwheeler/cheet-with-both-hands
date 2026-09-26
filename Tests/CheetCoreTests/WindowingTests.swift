@@ -98,3 +98,63 @@ struct TileLayoutTests {
         #expect(TileLayout.tile([], in: container, gap: 10, minWidth: 360).isEmpty)
     }
 }
+
+struct StashGeometryTests {
+    // A 1440×900 screen; the visible frame loses a 25pt menu bar at the top and a 60pt Dock at the bottom.
+    let screen = CGRect(x: 0, y: 0, width: 1440, height: 900)
+    let visible = CGRect(x: 0, y: 60, width: 1440, height: 815)
+
+    func stash(_ frame: CGRect, others: [CGRect] = []) -> (edge: StashEdge, frame: CGRect) {
+        StashGeometry.stash(frame, visibleFrame: visible, screenFrame: screen, otherScreens: others, sliver: 20)
+    }
+
+    @Test func slidesToTheNearestSideLeavingASliver() {
+        let left = stash(CGRect(x: 40, y: 300, width: 400, height: 300))
+        #expect(left.edge == .left)
+        #expect(left.frame == CGRect(x: -380, y: 300, width: 400, height: 300))
+
+        let right = stash(CGRect(x: 1000, y: 300, width: 400, height: 300))
+        #expect(right.edge == .right)
+        #expect(right.frame.minX == 1420)
+    }
+
+    @Test func topAndBottomStayClearOfTheMenuBarAndDock() {
+        let top = stash(CGRect(x: 500, y: 560, width: 400, height: 300)) // 15pt below the visible top
+        #expect(top.edge == .top)
+        #expect(top.frame.minY == visible.maxY - 20)
+
+        let bottom = stash(CGRect(x: 500, y: 70, width: 400, height: 300)) // 10pt above the Dock
+        #expect(bottom.edge == .bottom)
+        #expect(bottom.frame.maxY == visible.minY + 20)
+    }
+
+    @Test func tiesPreferLeftAndRightOverTopAndBottom() {
+        // 20pt from the left edge and 20pt from the top (maxY 855, visible top 875).
+        let result = stash(CGRect(x: 20, y: 555, width: 400, height: 300))
+        #expect(result.edge == .left)
+    }
+
+    @Test func skipsAnEdgeSharedWithAnotherDisplay() {
+        let displayOnTheLeft = CGRect(x: -1920, y: 0, width: 1920, height: 1080)
+        let result = stash(CGRect(x: 30, y: 300, width: 400, height: 300), others: [displayOnTheLeft])
+        #expect(result.edge != .left)
+    }
+
+    @Test func aDisplayBesideButNotAlongsideTheWindowDoesNotBlockTheEdge() {
+        // The other display sits to the left but only spans y 0…200; the window is at y 300…600.
+        let lowDisplay = CGRect(x: -800, y: 0, width: 800, height: 200)
+        #expect(stash(CGRect(x: 30, y: 300, width: 400, height: 300), others: [lowDisplay]).edge == .left)
+    }
+
+    @Test func fallsBackToTheNearestEdgeWhenEveryEdgeIsShared() {
+        let neighbours = [CGRect(x: -1440, y: 0, width: 1440, height: 900), CGRect(x: 1440, y: 0, width: 1440, height: 900),
+                          CGRect(x: 0, y: 900, width: 1440, height: 900), CGRect(x: 0, y: -900, width: 1440, height: 900)]
+        #expect(stash(CGRect(x: 30, y: 300, width: 400, height: 300), others: neighbours).edge == .left)
+    }
+
+    @Test func aWindowAlreadyHangingPastAnEdgeStillGetsExactlyASliver() {
+        let result = stash(CGRect(x: -150, y: 300, width: 400, height: 300))
+        #expect(result.edge == .left)
+        #expect(result.frame.maxX == visible.minX + 20)
+    }
+}
