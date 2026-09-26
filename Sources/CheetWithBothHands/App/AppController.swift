@@ -53,6 +53,7 @@ final class AppController {
         ImageStore.shared.prefetch(model.cheets)
         statusMenu = StatusMenuController(controller: self)
         picker.onChoose = { [weak self] id, alongside in self?.overlay.show(cheetID: id, alongside: alongside) }
+        picker.onRecall = { [weak self] id in self?.overlay.recall(workspaceID: id) }
 
         let hotkeys = HotkeyCenter.shared
         hotkeys.install()

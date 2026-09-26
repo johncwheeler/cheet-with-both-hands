@@ -118,6 +118,13 @@ enum DebugSnapshots {
                         await pause(0.5)
                         print("workspace: saved \(saved)")
                         print("workspace: recalled \(frames())")
+                        controller.picker.state.query = "snap"
+                        let found = controller.picker.results().prefix(2).map { item -> String in
+                            if case .workspace(let workspace) = item { return "workspace “\(workspace.name)”" }
+                            return "cheet"
+                        }
+                        print("picker: \(found)")
+                        controller.picker.state.query = ""
                     }
                     controller.model.workspaces.removeAll { $0.name == "Snapshot Test" } // keep scratch libraries clean
                     overlay.hide()

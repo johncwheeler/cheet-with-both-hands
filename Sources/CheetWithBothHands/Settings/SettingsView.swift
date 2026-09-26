@@ -28,6 +28,7 @@ struct SettingsView: View {
                 case .appearance: AppearancePane(model: model)
                 case .layout: LayoutPane(model: model)
                 case .cheets: CheetsPane(model: model, navigation: navigation)
+                case .workspaces: WorkspacesPane(model: model)
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)

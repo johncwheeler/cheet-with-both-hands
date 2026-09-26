@@ -4,7 +4,7 @@ import Observation
 import SwiftUI
 
 enum SettingsPane: String, CaseIterable, Identifiable {
-    case general, hotkeys, appearance, layout, cheets
+    case general, hotkeys, appearance, layout, cheets, workspaces
 
     var id: String { rawValue }
 
@@ -15,6 +15,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         case .appearance: "Appearance"
         case .layout: "Position & Size"
         case .cheets: "Cheets"
+        case .workspaces: "Workspaces"
         }
     }
 
@@ -25,6 +26,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         case .appearance: "paintpalette"
         case .layout: "rectangle.inset.filled.and.person.filled"
         case .cheets: "list.bullet.rectangle"
+        case .workspaces: "square.stack.3d.up"
         }
     }
 }

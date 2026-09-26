@@ -150,7 +150,7 @@ final class StatusMenuController: NSObject, NSMenuDelegate {
             update.isEnabled = overlay.isVisible
             workspacesMenu.addItem(update)
         }
-        workspacesMenu.addItem(ActionMenuItem("Manage Workspaces…", modifiers: []) { [weak controller] in controller?.openSettings(.cheets) })
+        workspacesMenu.addItem(ActionMenuItem("Manage Workspaces…", modifiers: []) { [weak controller] in controller?.openSettings(.workspaces) })
         workspacesItem.submenu = workspacesMenu
         menu.addItem(workspacesItem)
 
