@@ -233,7 +233,7 @@ final class AppController {
     }
 
     func exportLibrary() {
-        guard let data = try? LibraryStore.encodeLibrary(model.cheets) else { return }
+        guard let data = try? LibraryStore.encodeLibrary(Library(cheets: model.cheets, workspaces: model.workspaces)) else { return }
         save(data: data, suggestedName: "Cheets Library.json", type: .json)
     }
 
@@ -243,14 +243,25 @@ final class AppController {
         panel.allowedContentTypes = [.json]
         guard panel.runModal() == .OK, let url = panel.url else { return }
         do {
-            let incoming = try LibraryStore.decodeCheets(from: Data(contentsOf: url))
+            let incoming = try LibraryStore.decodeLibrary(from: Data(contentsOf: url))
             let existing = Set(model.cheets.map(\.id))
-            var added = 0
-            for var cheet in incoming {
-                if existing.contains(cheet.id) { cheet.id = UUID() }
+            var renamed: [UUID: UUID] = [:]
+            for var cheet in incoming.cheets {
+                if existing.contains(cheet.id) {
+                    let fresh = UUID()
+                    renamed[cheet.id] = fresh
+                    cheet.id = fresh
+                }
                 model.add(cheet)
-                added += 1
             }
+            let known = Set(model.cheets.map(\.id))
+            for var workspace in incoming.workspaces {
+                workspace.id = UUID()
+                workspace.hotkey = nil // don't steal combos on import
+                workspace.windows = workspace.windows.map { var w = $0; w.cheetID = renamed[w.cheetID] ?? w.cheetID; return w }
+                model.workspaces.append(workspace.pruned(keeping: known))
+            }
+            let added = incoming.cheets.count
             showAlert("Imported \(added) cheet\(added == 1 ? "" : "s")", "They've been added to the end of your library.")
         } catch {
             showAlert("Couldn't read that library", error.localizedDescription)

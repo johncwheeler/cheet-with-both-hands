@@ -139,8 +139,8 @@ struct StorageTests {
         }
         cheets[0].appearance = Appearance()
         cheets[1].hotkey = .custom(KeyCombo(keyCode: KeyCodes.k, modifiers: [.command, .shift]))
-        try store.saveCheets(cheets)
-        #expect(try store.loadCheets() == cheets)
+        try store.saveLibrary(Library(cheets: cheets))
+        #expect(try store.loadLibrary() == Library(cheets: cheets))
 
         var settings = AppSettings()
         settings.appearance.fontSize = 17
