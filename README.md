@@ -56,6 +56,11 @@ Clipboard, Import Files, Ghost Mode (click-through), pause hotkeys, Launch at Lo
 
 ### Settings
 
+- **General**: launch at login, trigger behavior, and the icon style. **Cheeter** (the default) is the
+  mascot: Cheeter as the app icon, the ⌘ war hammer in the menu bar, an optional splash screen at launch
+  (it shows for at least half a second and until the app is ready), and an optional cameo in the cheet
+  picker. **Classic** swaps in the original keycap icons in the Dock, ⌘-Tab and menu bar. The Finder
+  icon is always Cheeter.
 - **Hotkeys**: the base combo for number shortcuts (any mix of ⌃⌥⇧⌘), global action combos, and
   per-cheet Automatic / Custom / None with conflict and availability badges.
 - **Appearance**: blur material, light/dark, tint color and strength, background and window
@@ -153,7 +158,8 @@ Sources/CheetWithBothHands/   AppKit + SwiftUI app
   Overlay/                    non-activating NSPanel, fade/peek logic, masonry cheet renderer
   Picker/                     Spotlight-style cheet switcher
   MenuBar/  Settings/  Importer/
-scripts/                      build-app.sh, make-icon.swift
+Resources/Cheeter/            mascot art: source.webp, plus the PNGs generated from it
+scripts/                      build-app.sh, make-icon.swift, make-cheeter-assets.swift
 ```
 
 Global hotkeys use Carbon's `RegisterEventHotKey`, which works without Accessibility permission

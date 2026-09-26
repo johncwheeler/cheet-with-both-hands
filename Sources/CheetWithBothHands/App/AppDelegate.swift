@@ -7,7 +7,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         MainMenu.install()
         let controller = AppController()
         AppController.shared = controller
-        controller.start()
+        controller.launch()
     }
 
     func applicationWillTerminate(_ notification: Notification) {

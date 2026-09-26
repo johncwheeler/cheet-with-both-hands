@@ -150,6 +150,15 @@ struct PickerView: View {
                 Text("\(model.cheets.count) cheets")
                     .font(.caption)
                     .foregroundStyle(.tertiary)
+                if model.settings.branding.pickerMascotEnabled, let head = Mascot.head {
+                    Image(nsImage: head)
+                        .resizable()
+                        .interpolation(.high)
+                        .scaledToFit()
+                        .frame(width: 60, height: 57)
+                        .padding(.vertical, -12) // overhangs the row instead of making it taller
+                        .accessibilityHidden(true)
+                }
             }
             .padding(.horizontal, 18)
             .padding(.vertical, 14)

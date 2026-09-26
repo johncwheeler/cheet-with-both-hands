@@ -29,15 +29,28 @@ cp "$BIN_DIR/$EXECUTABLE" "$APP/Contents/MacOS/$EXECUTABLE"
 cp "$ROOT/Resources/Info.plist" "$APP/Contents/Info.plist"
 printf 'APPL????' > "$APP/Contents/PkgInfo"
 
-ICNS="$BUILD_DIR/AppIcon.icns"
-if [[ ! -f "$ICNS" || "$ROOT/scripts/make-icon.swift" -nt "$ICNS" ]]; then
-  echo "▸ Rendering icon…"
-  ICONSET="$BUILD_DIR/AppIcon.iconset"
-  rm -rf "$ICONSET"
-  swift "$ROOT/scripts/make-icon.swift" "$ICONSET" >/dev/null
-  iconutil -c icns "$ICONSET" -o "$ICNS"
-fi
-cp "$ICNS" "$APP/Contents/Resources/AppIcon.icns"
+# render_icon <name> <style> [inputs…]: renders build/<name>.icns when it's missing or older than
+# the icon script or any of the inputs.
+render_icon() {
+  local name="$1" style="$2" icns="$BUILD_DIR/$1.icns"
+  shift 2
+  local stale=0
+  for input in "$ROOT/scripts/make-icon.swift" ${@+"$@"}; do
+    if [[ "$input" -nt "$icns" ]]; then stale=1; fi
+  done
+  if [[ ! -f "$icns" || $stale == 1 ]]; then
+    echo "▸ Rendering $name…"
+    local iconset="$BUILD_DIR/$name.iconset"
+    rm -rf "$iconset"
+    swift "$ROOT/scripts/make-icon.swift" "$iconset" "$style" ${@+"$@"} >/dev/null
+    iconutil -c icns "$iconset" -o "$icns"
+  fi
+  cp "$icns" "$APP/Contents/Resources/$name.icns"
+}
+# Cheeter is the bundle icon; the classic icon is swapped in at runtime when chosen in Settings.
+render_icon AppIcon cheeter "$ROOT/Resources/Cheeter/Cheeter.png"
+render_icon ClassicAppIcon classic
+cp "$ROOT"/Resources/Cheeter/*.png "$APP/Contents/Resources/"   # mascot art for the splash and picker
 
 echo "▸ Signing (ad-hoc)…"
 codesign --force --sign - --timestamp=none "$APP" >/dev/null

@@ -145,6 +145,8 @@ struct StorageTests {
         var settings = AppSettings()
         settings.appearance.fontSize = 17
         settings.hotkeys.baseModifiers = [.control, .shift]
+        settings.branding.iconScheme = .classic
+        settings.branding.showSplash = false
         try store.saveSettings(settings)
         #expect(store.loadSettings() == settings)
     }
@@ -156,6 +158,30 @@ struct StorageTests {
         #expect(settings.appearance.material == .hud)
         #expect(settings.behavior.trigger == .toggle)
         #expect(settings.hotkeys == HotkeySettings())
+    }
+
+    @Test func settingsFromBeforeIconSchemesUseCheeter() {
+        let json = #"{"appearance": {"fontSize": 20}}"#
+        let settings = ResilientJSON.decode(AppSettings.self, from: Data(json.utf8), defaults: AppSettings())
+        #expect(settings.branding == Branding())
+        #expect(settings.branding.iconScheme == .cheeter)
+        #expect(settings.branding.splashEnabled)
+    }
+
+    @Test func cheeterExtrasOnlyApplyToTheCheeterScheme() {
+        var branding = Branding()
+        branding.iconScheme = .classic
+        #expect(!branding.splashEnabled)
+        #expect(!branding.pickerMascotEnabled)
+
+        branding.iconScheme = .cheeter
+        #expect(branding.splashEnabled)
+        #expect(branding.pickerMascotEnabled)
+
+        branding.showSplash = false
+        branding.showPickerMascot = false
+        #expect(!branding.splashEnabled)
+        #expect(!branding.pickerMascotEnabled)
     }
 
     @Test func normalizedRectRoundTrip() {

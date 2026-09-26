@@ -112,6 +112,13 @@ enum DebugSnapshots {
             shot(editorWindow, "card-style-editor")
             editorWindow.orderOut(nil)
 
+            capture(controller.statusMenu.button?.image, to: directory.appendingPathComponent("menu-bar-icon.png"))
+            if controller.model.settings.branding.iconScheme == .cheeter, let splash = SplashController.show(Mascot.character) {
+                await pause(1.0)
+                shot(splash.window, "splash")
+                splash.markReady()
+            }
+
             controller.picker.show(focus: false)
             await pause(0.6)
             shot(controller.picker.window, "picker")
@@ -211,6 +218,22 @@ enum DebugSnapshots {
             print("snapshots written to \(directory.path)")
             NSApp.terminate(nil)
         }
+    }
+
+    /// Renders an icon at 4× on white (template images don't draw when their window is captured offscreen).
+    static func capture(_ image: NSImage?, to url: URL) {
+        guard let image else { return }
+        let size = NSSize(width: image.size.width * 4, height: image.size.height * 4)
+        guard let rep = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: Int(size.width), pixelsHigh: Int(size.height),
+                                         bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
+                                         colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0) else { return }
+        NSGraphicsContext.saveGraphicsState()
+        NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: rep)
+        NSColor.white.setFill()
+        NSRect(origin: .zero, size: size).fill()
+        image.draw(in: NSRect(origin: .zero, size: size))
+        NSGraphicsContext.restoreGraphicsState()
+        try? rep.representation(using: .png, properties: [:])?.write(to: url)
     }
 
     static func capture(_ window: NSWindow?, to url: URL) {

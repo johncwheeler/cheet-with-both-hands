@@ -31,13 +31,22 @@ final class StatusMenuController: NSObject, NSMenuDelegate {
     init(controller: AppController) {
         self.controller = controller
         super.init()
-        if let button = statusItem.button {
-            button.image = Self.makeIcon()
-            button.toolTip = "Cheet with Both Hands"
-        }
+        statusItem.button?.toolTip = "Cheet with Both Hands"
+        refreshIcon()
         menu.delegate = self
         menu.autoenablesItems = false
         statusItem.menu = menu
+    }
+
+    /// The menu bar button (for snapshots).
+    var button: NSStatusBarButton? { statusItem.button }
+
+    /// Shows the icon for the current icon scheme.
+    func refreshIcon() {
+        statusItem.button?.image = switch controller.model.settings.branding.iconScheme {
+        case .classic: Self.makeIcon()
+        case .cheeter: Mascot.makeHammerIcon()
+        }
     }
 
     func menuNeedsUpdate(_ menu: NSMenu) {

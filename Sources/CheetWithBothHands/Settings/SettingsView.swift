@@ -58,6 +58,22 @@ struct GeneralPane: View {
                 }
             }
 
+            Section {
+                Picker("Icon style", selection: $model.settings.branding.iconScheme) {
+                    ForEach(IconScheme.allCases, id: \.self) { Text($0.label).tag($0) }
+                }
+                .pickerStyle(.segmented)
+                Group {
+                    Toggle("Show the splash screen at launch", isOn: $model.settings.branding.showSplash)
+                    Toggle("Show Cheeter in the cheet picker", isOn: $model.settings.branding.showPickerMascot)
+                }
+                .disabled(model.settings.branding.iconScheme != .cheeter)
+            } header: {
+                Text("Icons")
+            } footer: {
+                Text("Sets the app icon in the Dock and ⌘-Tab, and the menu bar icon. The Finder icon is always Cheeter.")
+            }
+
             Section("When a cheet hotkey is pressed") {
                 Picker("Behavior", selection: $model.settings.behavior.trigger) {
                     ForEach(TriggerMode.allCases, id: \.self) { Text($0.label).tag($0) }
@@ -97,7 +113,7 @@ struct GeneralPane: View {
             Section {
                 Button("Reset All Settings…", role: .destructive) { confirmReset = true }
             } footer: {
-                Text("Resets hotkeys, appearance, layout and behavior. Your cheets are kept.")
+                Text("Resets hotkeys, appearance, layout, behavior and icons. Your cheets are kept.")
             }
         }
         .formStyle(.grouped)

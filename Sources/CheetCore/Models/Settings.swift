@@ -6,8 +6,38 @@ public struct AppSettings: Codable, Equatable, Sendable {
     public var appearance = Appearance()
     public var layout = OverlayLayout()
     public var behavior = Behavior()
+    public var branding = Branding()
 
     public init() {}
+}
+
+// MARK: - Branding
+
+public enum IconScheme: String, Codable, CaseIterable, Sendable {
+    /// The Cheeter mascot (the default): character app icon, hammer menu bar icon, splash screen, picker cameo.
+    case cheeter
+    /// The original keycap icons.
+    case classic
+
+    public var label: String {
+        switch self {
+        case .cheeter: "Cheeter"
+        case .classic: "Classic"
+        }
+    }
+}
+
+public struct Branding: Codable, Equatable, Sendable {
+    public var iconScheme: IconScheme = .cheeter
+    /// Cheeter scheme only: show the splash screen at launch.
+    public var showSplash = true
+    /// Cheeter scheme only: show Cheeter's head in the cheet picker.
+    public var showPickerMascot = true
+
+    public init() {}
+
+    public var splashEnabled: Bool { iconScheme == .cheeter && showSplash }
+    public var pickerMascotEnabled: Bool { iconScheme == .cheeter && showPickerMascot }
 }
 
 // MARK: - Hotkeys

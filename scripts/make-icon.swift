@@ -1,12 +1,48 @@
 #!/usr/bin/env swift
-// Renders the app icon (a glassy cheet flanked by ⌘ and ⌥ keycaps — one for each hand)
-// into an .iconset folder. Usage: swift scripts/make-icon.swift <output.iconset>
+// Renders an app icon into an .iconset folder:
+//   cheeter  Cheeter on a parchment tile (the default icon)
+//   classic  a glassy cheet flanked by ⌘ and ⌥ keycaps — one for each hand
+// Usage: swift scripts/make-icon.swift <output.iconset> [cheeter <Cheeter.png> | classic]
 import AppKit
 
-let output = URL(fileURLWithPath: CommandLine.arguments.dropFirst().first ?? "AppIcon.iconset")
+let arguments = Array(CommandLine.arguments.dropFirst())
+let output = URL(fileURLWithPath: arguments.first ?? "AppIcon.iconset")
+let style = arguments.count > 1 ? arguments[1] : "classic"
 try? FileManager.default.createDirectory(at: output, withIntermediateDirectories: true)
 
-func drawIcon(size: CGFloat) -> NSImage {
+/// Cheeter on a parchment tile, cropped by the tile's bottom edge like a portrait.
+func drawCheeterIcon(size: CGFloat, character: NSImage) -> NSImage {
+    NSImage(size: NSSize(width: size, height: size), flipped: false) { _ in
+        let s = size / 1024
+        guard let ctx = NSGraphicsContext.current?.cgContext else { return false }
+        // macOS icon grid: an 824pt body with 100pt margins.
+        let body = NSRect(x: 100 * s, y: 100 * s, width: 824 * s, height: 824 * s)
+        let tile = NSBezierPath(roundedRect: body, xRadius: 185 * s, yRadius: 185 * s)
+        ctx.saveGState()
+        ctx.setShadow(offset: CGSize(width: 0, height: -12 * s), blur: 28 * s, color: NSColor.black.withAlphaComponent(0.35).cgColor)
+        NSColor.black.setFill()
+        tile.fill()
+        ctx.restoreGState()
+
+        ctx.saveGState()
+        tile.addClip()
+        NSGradient(colors: [
+            NSColor(srgbRed: 0.96, green: 0.89, blue: 0.72, alpha: 1),
+            NSColor(srgbRed: 0.86, green: 0.73, blue: 0.49, alpha: 1),
+        ])!.draw(in: body, angle: -90)
+        let height = 900 * s
+        let width = height * character.size.width / character.size.height
+        character.draw(in: NSRect(x: body.midX - width / 2 + 10 * s, y: body.minY - 70 * s, width: width, height: height))
+        ctx.restoreGState()
+
+        NSColor.black.withAlphaComponent(0.25).setStroke()
+        tile.lineWidth = 3 * s
+        tile.stroke()
+        return true
+    }
+}
+
+func drawClassicIcon(size: CGFloat) -> NSImage {
     NSImage(size: NSSize(width: size, height: size), flipped: false) { _ in
         let s = size / 1024
         guard let ctx = NSGraphicsContext.current?.cgContext else { return false }
@@ -90,11 +126,24 @@ func writePNG(_ image: NSImage, pixels: Int, to url: URL) {
     try! rep.representation(using: .png, properties: [:])!.write(to: url)
 }
 
+let drawIcon: (CGFloat) -> NSImage
+switch style {
+case "cheeter":
+    guard arguments.count > 2, let character = NSImage(contentsOfFile: arguments[2]) else {
+        fatalError("cheeter needs the path to Cheeter.png")
+    }
+    drawIcon = { drawCheeterIcon(size: $0, character: character) }
+case "classic":
+    drawIcon = drawClassicIcon
+default:
+    fatalError("Unknown icon style \(style); use cheeter or classic")
+}
+
 for base in [16, 32, 128, 256, 512] {
     for scale in [1, 2] {
         let pixels = base * scale
         let name = scale == 1 ? "icon_\(base)x\(base).png" : "icon_\(base)x\(base)@2x.png"
-        writePNG(drawIcon(size: CGFloat(pixels)), pixels: pixels, to: output.appendingPathComponent(name))
+        writePNG(drawIcon(CGFloat(pixels)), pixels: pixels, to: output.appendingPathComponent(name))
     }
 }
 print("Wrote \(output.path)")

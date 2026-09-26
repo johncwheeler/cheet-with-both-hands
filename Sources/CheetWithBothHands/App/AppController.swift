@@ -12,6 +12,8 @@ final class AppController {
     let picker: PickerController
     let windows: WindowManager
     private(set) var statusMenu: StatusMenuController!
+    /// The launch splash, while it's on screen.
+    private var splash: SplashController?
 
     init() {
         // CWBH_DATA_DIR points the app at an alternate library (handy for testing).
@@ -28,6 +30,23 @@ final class AppController {
         windows = WindowManager(model: model)
     }
 
+    /// Shows the splash screen if it's enabled, then starts the app underneath it.
+    func launch() {
+        Mascot.applyAppIcon(for: model.settings.branding.iconScheme)
+        guard model.settings.branding.splashEnabled, !DebugSnapshots.isRequested,
+              let splash = SplashController.show(Mascot.character) else {
+            start()
+            return
+        }
+        self.splash = splash
+        splash.whenFinished { [weak self] in self?.splash = nil }
+        // Let the splash reach the screen before the startup work runs on the main thread.
+        DispatchQueue.main.async { [weak self] in
+            self?.start()
+            splash.markReady()
+        }
+    }
+
     func start() {
         ImageStore.shared.configure(libraryDirectory: model.store.directory)
         ImageStore.shared.prune(keeping: model.cheets)
@@ -42,6 +61,10 @@ final class AppController {
         model.onHotkeyPlanChanged = { [weak self] in self?.refreshHotkeys() }
         model.addSettingsObserver { [weak self] old, new in
             if old.hotkeys.enabled != new.hotkeys.enabled { self?.refreshHotkeys() }
+            if old.branding.iconScheme != new.branding.iconScheme {
+                Mascot.applyAppIcon(for: new.branding.iconScheme)
+                self?.statusMenu.refreshIcon()
+            }
         }
         refreshHotkeys()
 
@@ -50,8 +73,12 @@ final class AppController {
             return
         }
         if model.isFirstLaunch, let welcome = model.cheets.first {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { [weak self] in
-                self?.overlay.show(cheetID: welcome.id)
+            if let splash {
+                splash.whenFinished { [weak self] in self?.overlay.show(cheetID: welcome.id) }
+            } else {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { [weak self] in
+                    self?.overlay.show(cheetID: welcome.id)
+                }
             }
         }
     }
