@@ -1,0 +1,28 @@
+Makefile
+  s_10ba636896f44a::t_0f21c97bf7ba0f 2,13,30-36
+  s_10ba636896f44a::t_aad35535adc806 37
+.github/workflows/build.yml
+  s_10ba636896f44a::t_2ae74656a03bce 1-56
+README.md
+  s_10ba636896f44a::t_8c02fbafb280d8 32-44,55,58-59
+scripts/build-app.sh
+  s_10ba636896f44a::t_530184477ed0ee 17-19,21,24-38,43
+  s_10ba636896f44a::t_2555053de54f31 45-50
+  s_10ba636896f44a::t_746e585e01bbb8 6
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "8ecd40d3dad8277923ba328aca422d460f8d3640",
+  "prompts": {},
+  "sessions": {
+    "s_10ba636896f44a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a40fafc3-e2f1-4632-b17f-ff8b951289c2",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "John Wheeler <jcw.dev@etherealfringe.com>"
+    }
+  }
+}
