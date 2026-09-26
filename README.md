@@ -32,12 +32,15 @@ and give each its own colors, gradient or glow.
 ## Download
 
 Every push builds the app on GitHub Actions. Open a run under **Actions › Build** and download the
-**Cheet-with-Both-Hands** artifact. Pushing a version tag also publishes a release with the zip
-attached under **Releases**:
+**Cheet-with-Both-Hands** artifact. Pushing a version tag attaches the zip to that tag's release
+under **Releases**, creating the release if you haven't made it yet:
 
 ```bash
 git tag v1.1.0 && git push origin v1.1.0
 ```
+
+For a release that has no zip yet, run **Actions › Build › Run workflow** and enter its tag. That
+builds the tagged code and attaches the zip.
 
 The app is ad-hoc signed, not notarized, so macOS blocks it the first time. Unzip it, move it to
 Applications, open it, then allow it under System Settings › Privacy & Security › **Open Anyway**.
