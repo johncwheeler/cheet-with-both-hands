@@ -1,0 +1,33 @@
+Sources/CheetWithBothHands/App/AppController.swift
+  s_10ba636896f44a::t_85f4458437612d 56
+Sources/CheetWithBothHands/Support/DebugSnapshots.swift
+  s_10ba636896f44a::t_85f4458437612d 121-127
+Sources/CheetWithBothHands/Picker/PickerController.swift
+  s_10ba636896f44a::t_85f4458437612d 6-17,31,57,80-81,83-85,87,98-100,103,105-108,114,194-207,220,253-285
+  s_10ba636896f44a::t_a8e7c8bfbdf8aa 286
+Sources/CheetWithBothHands/Settings/WindowManager.swift
+  s_10ba636896f44a::t_85f4458437612d 7,18,29
+Sources/CheetWithBothHands/Settings/SettingsView.swift
+  s_10ba636896f44a::t_85f4458437612d 31
+Sources/CheetWithBothHands/MenuBar/StatusMenuController.swift
+  s_10ba636896f44a::t_85f4458437612d 153
+Sources/CheetWithBothHands/Settings/WorkspacesPane.swift
+  s_10ba636896f44a::t_85f4458437612d 1-15,17-25,27-54
+  s_10ba636896f44a::t_baf425f87f2460 16,26
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "a58167a48076664ba7eaa40f297eca7fb141d7ff",
+  "prompts": {},
+  "sessions": {
+    "s_10ba636896f44a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a40fafc3-e2f1-4632-b17f-ff8b951289c2",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "John Wheeler <jcw.dev@etherealfringe.com>"
+    }
+  }
+}
