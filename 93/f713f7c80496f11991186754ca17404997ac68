@@ -1,0 +1,40 @@
+Sources/CheetCore/Support/HotkeyResolver.swift
+  s_10ba636896f44a::t_034596a9181df3 8,75-79
+  s_10ba636896f44a::t_c4687330a7f665 80-81
+Sources/CheetWithBothHands/Picker/PickerController.swift
+  s_10ba636896f44a::t_e7445f30baab5e 18,84,86,89,92,108,181,202
+Sources/CheetWithBothHands/MenuBar/StatusMenuController.swift
+  s_10ba636896f44a::t_e7445f30baab5e 77-91,93,99,116
+Sources/CheetWithBothHands/Support/DebugSnapshots.swift
+  s_10ba636896f44a::t_0ce431fe77db3f 76-94
+Sources/CheetWithBothHands/App/AppController.swift
+  s_10ba636896f44a::t_e7445f30baab5e 55
+  s_10ba636896f44a::t_034596a9181df3 100-102,113-116
+Tests/CheetCoreTests/SupportTests.swift
+  s_10ba636896f44a::t_b9721f75040515 96-126
+Sources/CheetWithBothHands/App/AppDelegate.swift
+  s_10ba636896f44a::t_e7445f30baab5e 34,47-49
+Sources/CheetCore/Models/Settings.swift
+  s_10ba636896f44a::t_034596a9181df3 54-55
+Sources/CheetWithBothHands/Overlay/CheetWindowManager.swift
+  s_10ba636896f44a::t_39acee5f9538ca 32-33,36-44,49,52-58,60-62,64,69-76,79,83-93,123-133,136-149,151,155-163,176-178,181
+Sources/CheetWithBothHands/Settings/SettingsView.swift
+  s_10ba636896f44a::t_e7445f30baab5e 161-166,236-241
+  s_10ba636896f44a::t_034596a9181df3 289
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "93f713f7c80496f11991186754ca17404997ac68",
+  "prompts": {},
+  "sessions": {
+    "s_10ba636896f44a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a40fafc3-e2f1-4632-b17f-ff8b951289c2",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "John Wheeler <jcw.dev@etherealfringe.com>"
+    }
+  }
+}

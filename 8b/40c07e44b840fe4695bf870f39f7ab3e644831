@@ -1,0 +1,46 @@
+Tests/CheetCoreTests/SupportTests.swift
+  s_10ba636896f44a::t_15dfffd7c357ea 141-153
+Sources/CheetWithBothHands/MenuBar/StatusMenuController.swift
+  s_10ba636896f44a::t_d1145a7e859661 136-156
+Sources/CheetWithBothHands/Settings/SettingsView.swift
+  s_10ba636896f44a::t_d1145a7e859661 293
+Sources/CheetCore/Support/HotkeyResolver.swift
+  s_10ba636896f44a::t_d1145a7e859661 10,51,72-74
+  s_10ba636896f44a::t_2143ddc2b66d24 75
+Sources/CheetWithBothHands/Overlay/OverlayView.swift
+  s_10ba636896f44a::t_d1145a7e859661 214-217
+Sources/CheetWithBothHands/App/AppDelegate.swift
+  s_10ba636896f44a::t_d1145a7e859661 35,69-74
+Sources/CheetWithBothHands/Settings/WindowManager.swift
+  s_10ba636896f44a::t_d1145a7e859661 49,128-145
+Sources/CheetWithBothHands/Settings/WorkspaceNamingView.swift
+  s_10ba636896f44a::t_d1145a7e859661 1-43
+Sources/CheetWithBothHands/Support/NSScreen+Display.swift
+  s_10ba636896f44a::t_d1145a7e859661 1-23
+Sources/CheetWithBothHands/Overlay/CheetWindowController.swift
+  s_10ba636896f44a::t_d1145a7e859661 521
+Sources/CheetWithBothHands/Support/DebugSnapshots.swift
+  s_10ba636896f44a::t_d1145a7e859661 112-122
+Sources/CheetWithBothHands/App/AppController.swift
+  s_10ba636896f44a::t_d1145a7e859661 113-114
+Sources/CheetWithBothHands/App/AppModel.swift
+  s_10ba636896f44a::t_d1145a7e859661 71,82
+Sources/CheetWithBothHands/Overlay/CheetWindowManager.swift
+  s_10ba636896f44a::t_d1145a7e859661 225-296
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "8b40c07e44b840fe4695bf870f39f7ab3e644831",
+  "prompts": {},
+  "sessions": {
+    "s_10ba636896f44a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a40fafc3-e2f1-4632-b17f-ff8b951289c2",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "John Wheeler <jcw.dev@etherealfringe.com>"
+    }
+  }
+}
