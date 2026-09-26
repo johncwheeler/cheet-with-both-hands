@@ -1,9 +1,50 @@
-# Cheet with Both Hands
+<p align="center">
+  <img src="docs/images/cheeter.png" width="280" alt="Cheeter, the app's mascot: a grinning kid in a cheetah-pelt hood, holding a war hammer whose head is a giant ⌘ key">
+</p>
+
+<h1 align="center">Cheet with Both Hands</h1>
+
+<p align="center"><b>Cheat sheets on a hotkey, for every app.</b><br>Brought to you by Cheeter, who keeps the good shortcuts scribbled up one arm.</p>
 
 A menu-bar app for macOS that pops up **cheets** (cheat sheets) on a hotkey. It fades in a translucent,
 interactive overlay over whatever you're working in. Tap the combo to pin a cheet, or hold it to
 peek and let go to hide it.
 
+<<<<<<< Updated upstream
+=======
+![A cheet in the overlay: cards of macOS shortcuts drawn as keycaps, grouped into System, Screenshots, Text editing, Windows and Finder](docs/images/overlay.png)
+
+## A quick tour
+
+**Type to filter.** Matching rows stay and the rest drop away, across every card.
+
+![Filtering the macOS cheet for "screen": only matching rows remain, with the match highlighted](docs/images/filter.png)
+
+**Make it yours.** Drag cards to reorder, resize them to span columns, hide the ones you don't need,
+and give each its own colors, gradient or glow.
+
+![The layout editor: cards with dashed outlines, resize handles, per-card toolbars, a gradient card and a hidden card](docs/images/layout-editor.png)
+
+**Jump anywhere.** ⌃⌥⌘/ opens the picker. Search every cheet and press Return. Cheeter keeps you company.
+
+<p align="center">
+  <img src="docs/images/picker.png" width="560" alt="The cheet picker: a search field with Cheeter's head in the corner, and a numbered list of cheets with their shortcuts">
+</p>
+
+## Download
+
+Every push builds the app on GitHub Actions. Open a run under **Actions › Build** and download the
+**Cheet-with-Both-Hands** artifact. Pushing a version tag also publishes a release with the zip
+attached under **Releases**:
+
+```bash
+git tag v1.1.0 && git push origin v1.1.0
+```
+
+The app is ad-hoc signed, not notarized, so macOS blocks it the first time. Unzip it, move it to
+Applications, open it, then allow it under System Settings › Privacy & Security › **Open Anyway**.
+
+>>>>>>> Stashed changes
 ## Build & run
 
 Requires macOS 14+ and a Swift 6 toolchain: Xcode 16+, or just the Command Line Tools. Tests use
