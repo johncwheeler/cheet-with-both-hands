@@ -70,7 +70,7 @@ bundle's version (CI does this for tags).
 | ⌃⌥⌘` | Toggle the last cheet |
 
 Inside the overlay: type to filter, ↑↓ scroll (⌥↑↓ / Page Up·Down / Space by the page, ⌘↑↓ to
-the ends — even while the filter field has focus), Esc clears then closes, ⌘[ / ⌘] switch cheets, ⌘1–9 jump,
+the ends — even while the filter field has focus), Esc clears then closes, ⇧← / ⇧→ or ⌘[ / ⌘] switch cheets (⇧← / ⇧→ only while the filter is empty), ⌘1–9 jump,
 ⌘+ / ⌘- / ⌘0 change the text size, ⌘P opens the picker, ⌘E edits the layout, ⌥⌘E edits the
 content. Click a cell to copy it. Drag the header to move, drag the corner to resize, and double-click the header to snap back to
 the preset position. Click a section title to collapse it.

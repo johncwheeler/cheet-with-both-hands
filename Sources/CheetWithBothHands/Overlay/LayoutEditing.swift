@@ -145,6 +145,7 @@ struct CardView: View {
                         SectionBlocksView(blocks: section.blocks, style: renderStyle, onCopy: onCopy)
                             .equatable()
                             .frame(maxWidth: .infinity, alignment: .leading)
+                            .hairlineScroller()
                     }
                     .scrollIndicators(.automatic)
                     .frame(maxHeight: .infinity, alignment: .top)
