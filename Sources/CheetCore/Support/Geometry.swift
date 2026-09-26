@@ -11,4 +11,10 @@ extension CGRect {
         r.origin.y = min(max(r.minY, container.minY), container.maxY - r.height)
         return r.integral
     }
+
+    /// This rect if it's still on one of `screens`; otherwise moved (not resized, unless too big) into
+    /// `fallback` — for windows whose display has been disconnected.
+    public func relocated(ontoScreens screens: [CGRect], fallback: CGRect, minSize: CGSize) -> CGRect {
+        screens.contains { $0.intersects(self) } ? self : clamped(to: fallback, minSize: minSize)
+    }
 }

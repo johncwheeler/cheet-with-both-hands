@@ -100,6 +100,13 @@ final class PickerController: NSObject, NSWindowDelegate {
         return workspaces + cheets
     }
 
+    /// The row selected when the query changes: the first matching cheet, so typing a cheet's name and
+    /// pressing Return opens it even when a workspace (listed first) also matches.
+    func defaultSelection() -> Int {
+        guard !state.query.trimmingCharacters(in: .whitespaces).isEmpty else { return 0 }
+        return results().firstIndex { if case .cheet = $0 { return true } else { return false } } ?? 0
+    }
+
     func choose(_ item: PickerItem, alongside: Bool = false) {
         hide()
         switch item {
@@ -168,7 +175,7 @@ struct PickerView: View {
                     .textFieldStyle(.plain)
                     .font(.system(size: 20, weight: .regular))
                     .focused($focused)
-                    .onChange(of: state.query) { state.selection = 0 }
+                    .onChange(of: state.query) { state.selection = controller.defaultSelection() }
                 Text("\(model.cheets.count) cheets")
                     .font(.caption)
                     .foregroundStyle(.tertiary)

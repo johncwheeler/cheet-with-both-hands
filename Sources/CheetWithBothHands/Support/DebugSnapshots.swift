@@ -127,6 +127,51 @@ enum DebugSnapshots {
                         controller.picker.state.query = ""
                     }
                     controller.model.workspaces.removeAll { $0.name == "Snapshot Test" } // keep scratch libraries clean
+
+                    // Review-fix checks: each line prints what a user should get.
+                    overlay.stash()
+                    await pause(0.4)
+                    overlay.handleOutsideClick()
+                    await pause(0.4)
+                    print("outside click while stashed: \(overlay.windows.count) windows")
+                    if overlay.windows.isEmpty { overlay.toggleLast() } else { overlay.unstash() }
+                    await pause(0.5)
+
+                    let home = overlay.activeWindow!.frame
+                    overlay.stash()
+                    await pause(0.4)
+                    if let spare = controller.model.cheets.first(where: { !overlay.isShowing($0.id) }) {
+                        overlay.show(cheetID: spare.id, focus: false)
+                        await pause(0.6)
+                        let opened = overlay.window(showing: spare.id)?.window.frame ?? .zero
+                        print("replace while stashed: opened at home frame \(opened == home)")
+                    }
+
+                    let keyWindow = overlay.activeWindow!.window
+                    keyWindow.makeKeyAndOrderFront(nil)
+                    await pause(0.3)
+                    let keyBefore = keyWindow.isKeyWindow
+                    overlay.stash()
+                    await pause(0.4)
+                    print("stash releases focus: key before \(keyBefore), after \(keyWindow.isKeyWindow)")
+                    overlay.unstash()
+                    await pause(0.4)
+
+                    controller.model.workspaces.append(Workspace(name: "Snapshot Vim", windows: []))
+                    controller.picker.state.query = "vim"
+                    let pickerResults = controller.picker.results()
+                    if case .workspace = pickerResults[controller.picker.defaultSelection()] {
+                        print("picker 'vim' preselects: workspace")
+                    } else {
+                        print("picker 'vim' preselects: cheet")
+                    }
+                    controller.picker.state.query = ""
+                    controller.model.workspaces.removeAll { $0.name == "Snapshot Vim" }
+
+                    weak let released = overlay.activeWindow
+                    overlay.hide()
+                    await pause(0.8)
+                    print("closed windows released: \(released == nil)")
                     overlay.hide()
                     await pause(0.3)
                 }

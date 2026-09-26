@@ -72,7 +72,7 @@ final class CheetWindowManager {
         hiddenSet = []
         if !set.isEmpty {
             for item in set {
-                open(item.cheetID, at: item.frame, focus: false).state.query = item.query
+                open(item.cheetID, at: onConnectedScreen(item.frame), focus: false).state.query = item.query
             }
             activeWindow?.focus(model.settings.behavior.takeFocus)
         } else if let id = model.cheet(id: model.viewState.lastCheetID)?.id ?? model.cheets.first?.id {
@@ -211,15 +211,19 @@ final class CheetWindowManager {
     func unstash() {
         guard isStashed else { return }
         isStashed = false
-        let mouseScreen = NSScreen.screens.first { NSMouseInRect(NSEvent.mouseLocation, $0.frame, false) } ?? NSScreen.main
         for window in windows {
             guard let home = window.homeFrame else { continue }
-            let stillOnAScreen = NSScreen.screens.contains { $0.frame.intersects(home) }
-            let target = stillOnAScreen || mouseScreen == nil ? home
-                : home.clamped(to: mouseScreen!.visibleFrame, minSize: OverlayPanel.minimumSize)
-            window.unstash(to: target)
+            window.unstash(to: onConnectedScreen(home))
         }
         activeWindow?.focus(model.settings.behavior.takeFocus)
+    }
+
+    /// `frame` if it's still on a connected display; otherwise moved onto the screen with the mouse.
+    private func onConnectedScreen(_ frame: NSRect) -> NSRect {
+        let mouse = NSEvent.mouseLocation
+        guard let fallback = NSScreen.screens.first(where: { NSMouseInRect(mouse, $0.frame, false) }) ?? NSScreen.main else { return frame }
+        return frame.relocated(ontoScreens: NSScreen.screens.map(\.frame), fallback: fallback.visibleFrame,
+                               minSize: OverlayPanel.minimumSize)
     }
 
     // MARK: Workspaces
@@ -366,15 +370,19 @@ final class CheetWindowManager {
 
     // MARK: Hide on outside click
 
+    /// A click in another app, with "Hide when clicking outside" on.
+    func handleOutsideClick() {
+        // Stashing exists so you can click in your app; that mustn't close the stash.
+        guard !isStashed, !windows.contains(where: { $0.editState.isEditing }) else { return }
+        hide()
+    }
+
     private func updateOutsideClickMonitor() {
         let wanted = model.settings.behavior.dismissOnOutsideClick && !windows.isEmpty
         if wanted, outsideClickMonitor == nil {
             // Global monitors only see clicks in other apps, so clicks in any cheet window don't count.
             outsideClickMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
-                MainActor.assumeIsolated {
-                    guard let self, !self.windows.contains(where: { $0.editState.isEditing }) else { return }
-                    self.hide()
-                }
+                MainActor.assumeIsolated { self?.handleOutsideClick() }
             }
         } else if !wanted, let monitor = outsideClickMonitor {
             NSEvent.removeMonitor(monitor)

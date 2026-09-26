@@ -102,15 +102,23 @@ final class CheetWindowController: NSObject, NSWindowDelegate {
     private(set) var homeFrame: NSRect?
     var isStashed: Bool { homeFrame != nil }
     /// The window's frame, or its home frame while stashed (for tiling, workspaces and hide).
-    var frame: NSRect { homeFrame ?? panel.frame }
+    var frame: NSRect { homeFrame ?? animationTarget ?? panel.frame }
+    /// Where an in-flight frame animation is heading (the panel's own frame lags behind it).
+    private var animationTarget: NSRect?
+    private var frameAnimation = 0
 
     func stash(to stashed: NSRect) {
         guard !isStashed else { return }
         if editState.isEditing { endEditing() }
-        homeFrame = panel.frame
+        homeFrame = frame
         state.isStashed = true
         panel.acceptsKey = false
-        if panel.isKeyWindow { panel.resignKey() }
+        if panel.isKeyWindow {
+            // resignKey() is only a notification; ordering the panel out and back in actually gives up
+            // key status, so typing goes back to the app underneath (acceptsKey is already false).
+            panel.orderOut(nil)
+            panel.orderFrontRegardless()
+        }
         setFrame(stashed, animate: true, remember: false)
     }
 
@@ -143,6 +151,9 @@ final class CheetWindowController: NSObject, NSWindowDelegate {
         let opacity = model.appearance(for: state.cheetID).windowOpacity
         let fade = behavior.fadeDuration
         isAnimatingFrame = true
+        animationTarget = frame
+        frameAnimation += 1
+        let animation = frameAnimation
         panel.setFrame(fade > 0 ? frame.offsetBy(dx: 0, dy: -10) : frame, display: false)
         panel.alphaValue = fade > 0 ? 0 : opacity
         if takeFocus { panel.makeKeyAndOrderFront(nil) } else { panel.orderFrontRegardless() }
@@ -155,8 +166,10 @@ final class CheetWindowController: NSObject, NSWindowDelegate {
             if fade > 0 { panel.animator().setFrame(frame, display: true) }
         }, completionHandler: { [weak self] in
             MainActor.assumeIsolated {
-                self?.isAnimatingFrame = false
-                self?.panel.invalidateShadow()
+                guard let self else { return }
+                if self.frameAnimation == animation { self.animationTarget = nil }
+                self.isAnimatingFrame = false
+                self.panel.invalidateShadow()
             }
         })
         if takeFocus { state.focusSearchRequest += 1 }
@@ -208,6 +221,9 @@ final class CheetWindowController: NSObject, NSWindowDelegate {
             MainActor.assumeIsolated {
                 guard let self, self.hideGeneration == generation else { return }
                 self.panel.orderOut(nil)
+                // The panel's SwiftUI root holds this controller; drop it so the closed window is freed.
+                self.panel.contentView = nil
+                self.panel.delegate = nil
                 self.manager.windowDidFinishClosing(self)
             }
         })
@@ -316,6 +332,9 @@ final class CheetWindowController: NSObject, NSWindowDelegate {
     func setFrame(_ frame: NSRect, animate: Bool, remember: Bool) {
         if remember { userAdjustedFrame = true }
         isAnimatingFrame = true
+        animationTarget = frame
+        frameAnimation += 1
+        let animation = frameAnimation
         NSAnimationContext.runAnimationGroup({ context in
             context.duration = animate ? 0.25 : 0
             context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
@@ -323,6 +342,7 @@ final class CheetWindowController: NSObject, NSWindowDelegate {
         }, completionHandler: { [weak self] in
             MainActor.assumeIsolated {
                 guard let self else { return }
+                if self.frameAnimation == animation { self.animationTarget = nil }
                 self.isAnimatingFrame = false
                 self.panel.invalidateShadow()
                 if remember { self.saveFrame() }

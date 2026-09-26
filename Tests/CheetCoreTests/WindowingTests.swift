@@ -158,3 +158,21 @@ struct StashGeometryTests {
         #expect(result.frame.maxX == visible.minX + 20)
     }
 }
+
+struct RelocationTests {
+    let builtIn = CGRect(x: 0, y: 0, width: 1440, height: 900)
+    let fallback = CGRect(x: 0, y: 60, width: 1440, height: 815)
+    let minSize = CGSize(width: 360, height: 220)
+
+    @Test func aFrameStillOnAScreenStaysPut() {
+        let frame = CGRect(x: 100, y: 100, width: 600, height: 400)
+        #expect(frame.relocated(ontoScreens: [builtIn], fallback: fallback, minSize: minSize) == frame)
+    }
+
+    @Test func aFrameOnADisconnectedDisplayMovesIntoTheFallbackKeepingItsSize() {
+        let onExternal = CGRect(x: 2000, y: 100, width: 600, height: 400)
+        let moved = onExternal.relocated(ontoScreens: [builtIn], fallback: fallback, minSize: minSize)
+        #expect(fallback.contains(moved))
+        #expect(moved.size == onExternal.size)
+    }
+}
