@@ -211,3 +211,7 @@ so it can take keyboard focus for filtering without taking activation away from 
 
 Dev aid: `CWBH_DATA_DIR=/tmp/cwbh` runs the app against a scratch library, and adding
 `CWBH_SNAPSHOT_DIR=/tmp/shots` renders every window to PNG and quits.
+
+## License
+
+MIT. See [LICENSE](LICENSE).
