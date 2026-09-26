@@ -181,13 +181,15 @@ includes Shift gets no alongside variant; the Hotkeys pane says so.
 ## Error handling and edge cases
 
 - Recalling a workspace whose windows all reference deleted cheets: show a toast "Nothing to
-  recall in W" and leave the current windows alone.
+  recall in W" (a beep when no cheet window is open to show it) and leave the current windows
+  alone.
 - A workspace or cheet hotkey that the system refuses (taken by another app): reported through
   the existing `hotkeyFailures` badges.
 - Unreadable `workspaces` in `library.json` decode to an empty list without losing the cheets
   (resilient decoding), and the launch backup still holds the original file.
-- Tiling with more windows than fit at minimum size: rows grow; windows may then be shorter than
-  ideal but never narrower than 360pt or shorter than the panel minimum (220pt).
+- Tiling with more windows than fit at minimum size: rows grow; windows are never narrower than
+  360pt, but with very many windows on a small screen (roughly ten or more) rows can be shorter
+  than the panel's 220pt minimum. Tiling doesn't enforce the minimum height.
 - Stash with every edge shared (a window on a middle display of three stacked both ways): fall
   back to the nearest edge anyway.
 
